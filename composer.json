@@ -1,0 +1,54 @@
+{
+    "name": "duxweb/dux-async",
+    "type": "library",
+    "description": "Full stack framework based on workerman",
+    "keywords": [
+        "workerman"
+    ],
+    "homepage": "https://github.com/duxphp",
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/duxweb/dux-async/issues",
+        "source": "https://github.com/duxweb/dux-async"
+    },
+    "authors": [
+        {
+            "name": "duxweb",
+            "email": "admin@dux.plus"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.2",
+        "php-di/php-di": "^7.0",
+        "cspray/labrador-http-cors": "^1.0",
+        "nesbot/carbon": "^3.8",
+        "nette/utils": "^4.0",
+        "gotzmann/comet": "^2.5",
+        "hassankhan/config": "^3.1",
+        "vlucas/phpdotenv": "^5.6",
+        "latte/latte": "^3.0",
+        "symfony/event-dispatcher": "^7.1",
+        "devium/toml": "^1.0",
+        "monolog/monolog": "^3.7",
+        "bramus/monolog-colored-line-formatter": "^3.1",
+        "symfony/console": "^7.1",
+        "symfony/process": "^7.1",
+        "illuminate/database": "^11.30",
+        "illuminate/pagination": "^11.30",
+        "illuminate/events": "^11.30",
+        "doctrine/dbal": "^4.2",
+        "xantios/mimey": "^2.2",
+        "fileeye/mimemap": "^2.2",
+        "swow/swow": "^1.5",
+        "chubbyphp/chubbyphp-swoole-request-handler": "^1.4",
+        "slim/psr7": "^1.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "src/",
+            "Core\\Tests\\": "tests"
+        }
+    }
+}
