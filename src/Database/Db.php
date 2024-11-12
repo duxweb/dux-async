@@ -9,9 +9,17 @@ use Illuminate\Events\Dispatcher;
 
 class Db
 {
+
     public static function init(array $configs): Manager
     {
         $capsule = new Manager;
+
+        $capsule->getDatabaseManager()->extend('mysql', function($config, $name) {
+            $config['name'] = $name;
+            return new \Core\Database\Connection\MySqlConnection($config);
+        });
+
+
         foreach ($configs as $key => $config) {
             $capsule->addConnection($config, $key);
         }
@@ -20,4 +28,5 @@ class Db
         $capsule->bootEloquent();
         return $capsule;
     }
+
 }

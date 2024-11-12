@@ -43,12 +43,17 @@
         "fileeye/mimemap": "^2.2",
         "swow/swow": "^1.5",
         "chubbyphp/chubbyphp-swoole-request-handler": "^1.4",
-        "slim/psr7": "^1.7"
+        "slim/psr7": "^1.7",
+        "ext-zlib": "*",
+        "ext-pdo": "*"
     },
     "autoload": {
         "psr-4": {
             "Core\\": "src/",
             "Core\\Tests\\": "tests"
         }
+    },
+    "require-dev": {
+        "swoole/ide-helper": "^5.1"
     }
 }

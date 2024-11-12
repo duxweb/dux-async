@@ -11,9 +11,12 @@ use Core\Logs\LogHandler;
 use Core\Translation\TomlFileLoader;
 use DI\Container;
 use Dotenv\Dotenv;
+use Dux\Database\Db;
+use Illuminate\Database\Capsule\Manager;
 use Monolog\Level;
 use Monolog\Logger;
 use Noodlehaus\Config;
+use Swoole\Runtime;
 use Symfony\Component\Translation\Translator;
 
 class App
@@ -69,6 +72,17 @@ class App
     public static function di(): Container
     {
         return self::$di;
+    }
+
+    public static function db(): Manager
+    {
+        if (!self::$di->has("db")) {
+            self::di()->set(
+                "db",
+                \Core\Database\Db::init(\Core\App::config("database")->get("db.drivers"))
+            );
+        }
+        return self::$di->get("db");
     }
 
     public static function dbMigrate(): Migrate

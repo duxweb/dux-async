@@ -2,39 +2,38 @@
 
 namespace Core\Coroutine;
 
-use Co\Context;
+use Core\Coroutine\Context;
 use Swoole\Coroutine;
-use WeakMap;
 
 class ContextManage
 {
-    public static WeakMap $map;
+    public static array $map = [];
 
     public static function init(): void
     {
-        self::$map ??= new WeakMap();
+        self::$map ??= [];
     }
 
-
-    public static function context(): Context
+    public static function context(): ?Context
     {
-        $context = Coroutine::getContext();
-        if (!isset(self::$map[$context])) {
-            self::$map[$context] = new Context();
+        $cid = Coroutine::getCid();
+        if ($cid < 0) {
+            return null;
+        }
+        if (!isset(self::$map[$cid])) {
+            self::$map[$cid] = new Context();
         }
 
-        return self::$map[$context];
+        return self::$map[$cid];
     }
 
     public static function destroy(): void
     {
-        $context = Coroutine::getContext();
-        if (!isset(self::$map[$context])) {
+        $cid = Coroutine::getCid();
+        if (!isset(self::$map[$cid])) {
             return;
         }
-        //sleep(5);
-        self::$map[$context]->destroy();
-        unset(self::$map[$context]);
+        self::$map[$cid]->destroy();
+        unset(self::$map[$cid]);
     }
-
 }

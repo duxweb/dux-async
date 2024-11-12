@@ -38,50 +38,70 @@ final class StaticMiddleware implements MiddlewareInterface
             $extension != 'php'
         ) {
 
-            $res = self::sendFile($realFile, new Response());
+            $res = self::sendFile($realFile, $request, new Response());
 
             return $res;
         }
         return $response;
     }
 
-    public function sendFile($file, ResponseInterface $response): \Psr\Http\Message\MessageInterface|ResponseInterface
+    public function sendFile($file,ServerRequestInterface $request,  ResponseInterface $response): \Psr\Http\Message\MessageInterface|ResponseInterface
     {
         $fileSize = filesize($file);
         $extension = pathinfo($file, PATHINFO_EXTENSION);
 
-        // 获取默认的 MIME 类型
         $type = new Extension($extension);
         $contentType = $type->getDefaultType();
 
+        $acceptEncoding = $request->getHeaderLine('Accept-Encoding');
+        $supportsGzip = str_contains($acceptEncoding, 'gzip');
+        $supportsDeflate = str_contains($acceptEncoding, 'deflate');
 
-        // 设置响应头
-        $response = $response->withHeader('Content-Type', $contentType);
+        if ($supportsGzip || $supportsDeflate) {
+            $response = $response->withHeader('Content-Encoding', $supportsGzip ? 'gzip' : 'deflate')
+                ->withHeader('Content-Type', $contentType);
 
-        if ($fileSize < 1024 * 1024 * 2) {
-            $response = $response->withHeader('Content-Length', $fileSize);
-            $response->getBody()->write(file_get_contents($file));
+            $fileHandler = fopen($file, 'r');
+            $stream = '';
+
+            while (!feof($fileHandler)) {
+                $chunk = fread($fileHandler, 64 * 1024); // 分块读取
+                $stream .= $supportsGzip ? gzencode($chunk) : gzdeflate($chunk); // 分块压缩
+            }
+
+            fclose($fileHandler);
+            $response->getBody()->write($stream);
             return $response;
         }
 
-        // 大文件分块发送
-        $response = $response->withHeader('Transfer-Encoding', 'chunked');
+        // 未压缩的大文件，分块发送
+        if ($fileSize > 2 * 1024 * 1024) {
+            $response = $response->withHeader('Content-Type', $contentType)
+                ->withHeader('Transfer-Encoding', 'chunked');
 
-        $fileHandler = fopen($file, 'r');
-        $doWrite = function () use ($fileHandler, $response) {
-            while (!feof($fileHandler)) {
-                $buffer = fread($fileHandler, 64 * 8 * 1024);
-                if ($buffer === false || $buffer === '') {
-                    return;
+
+            $fileHandler = fopen($file, 'r');
+            $doWrite = function () use ($fileHandler, $response) {
+                while (!feof($fileHandler)) {
+                    $buffer = fread($fileHandler, 64 * 8 * 1024);
+                    if ($buffer === false || $buffer === '') {
+                        return;
+                    }
+                    $response->getBody()->write($buffer);
                 }
-                $response->getBody()->write($buffer);
-            }
-        };
+            };
 
-        $doWrite();
+            $doWrite();
 
-        fclose($fileHandler);
+            fclose($fileHandler);
+            
+            return $response;
+        }
 
+        // 小文件直接发送
+        $response = $response->withHeader('Content-Type', $contentType)
+            ->withHeader('Content-Length', $fileSize);
+        $response->getBody()->write(file_get_contents($file));
         return $response;
     }
 

@@ -1,10 +1,10 @@
 <?php
 
-namespace Dux\Coroutine;
+namespace Core\Coroutine;
 
 class Context
 {
-    public array $data;
+    public array $data = [];
     public array $destroys = [];
 
     public function getValue(string $key): mixed

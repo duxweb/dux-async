@@ -18,6 +18,18 @@ App::create(__DIR__, 1337);
 
 // hello world
 App::web()->get('/', function ($request,  $response, array $args) {
+
+
+    var_dump('xxx');
+
+    for ($i = 0; $i < 1000; $i++) {
+        $data = App::db()->getConnection()->table('system_user')->first();
+
+        var_dump($i);
+    }
+
+
+
     return sendText($response, 'hello');
 });
 
