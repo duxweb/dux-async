@@ -10,6 +10,7 @@ use Chubbyphp\SwooleRequestHandler\SwooleResponseEmitter;
 use Core\App;
 use Core\Coroutine\ContextManage;
 use Core\Database\Db;
+use Core\Func\Fmt;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;
 use Slim\Psr7\Factory\UploadedFileFactory;
@@ -36,11 +37,12 @@ class WebCommand extends Command
         Runtime::enableCoroutine();
         ContextManage::init();
 
+
         run(function () {
 
-            ContextManage::init();
+            $http = new Server(App::di()->get('host'), App::di()->get('port'), false);
 
-            $http = new Server('0.0.0.0', 8080, false);
+            App::banner();
 
             $http->set([
                 'debug_mode' => true,
@@ -64,13 +66,11 @@ class WebCommand extends Command
                     App::web()->handle($factory->create($request)),
                     $response
                 );
+
                 return $response;
             });
 
             $http->start();
-
-
-            Db::shutdown();
 
             $http->shutdown();
 

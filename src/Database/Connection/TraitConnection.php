@@ -5,36 +5,40 @@ namespace Core\Database\Connection;
 use Core\App;
 use Core\Coroutine\ContextManage;
 use Core\Coroutine\Pool;
-use Illuminate\Database\Connectors\MySqlConnector;
-use Illuminate\Database\MySqlConnection as MySqlConnectionBase;
+use Illuminate\Database\Connectors\ConnectorInterface;
+use Monolog\Level;
 use PDO;
 use Swoole\Coroutine;
 
-class MySqlConnection extends MySqlConnectionBase
+trait TraitConnection
 {
     protected Pool $pool;
 
-    public function __construct(array $config)
+    /**
+     * 初始化连接
+     * @param ConnectorInterface $connector 
+     * @param array $config
+     * @return array
+     */
+    public function initialize(string $connector, array $config): array
     {
         $this->pool = new Pool(
-            callback: function () use ($config) {
-                $con = new MySqlConnector();
+            callback: function () use ($connector, $config) {
+                $con = new $connector();
                 $config['options'] = [
                     PDO::ATTR_PERSISTENT => false,
                 ];
                 return $con->connect($config);
             },
-            minSize: $config['pool']['min'] ?? 30,
-            maxSize: $config['pool']['max'] ?? 300,
+            maxIdle: $config['pool']['max_idle'] ?? 10,
+            maxOpen: $config['pool']['max_open'] ?? 100,
             timeOut: $config['pool']['timeout'] ?? 10,
             idleTime: $config['pool']['idle_time'] ?? 60,
-            logger: App::log("database_pool"),
-            debug: true
+            logger: App::log('database_pool', App::$debug ? Level::Debug : Level::Info),
         );
 
-        parent::__construct(function () {
-            return $this->getPool();
-        }, $config['database'], $config['prefix'], $config);
+        return [function () {
+        }, $config['database'], $config['prefix'], $config];
     }
 
     // 获取连接
@@ -69,8 +73,12 @@ class MySqlConnection extends MySqlConnectionBase
      * @param PDO $pdo
      * @return void
      */
-    protected function releasePool(PDO $pdo): void
+    protected function releasePool(?PDO $pdo = null): void
     {
+        if (!$pdo) {
+            $this->pool->put(null);
+            return;
+        }
         try {
             // 检查连接状态
             if ($pdo->inTransaction() || $pdo->getAttribute(\PDO::ATTR_SERVER_INFO) !== false) {
@@ -84,9 +92,15 @@ class MySqlConnection extends MySqlConnectionBase
         }
     }
 
-    public function disconnect()
+    public function getPdo(): PDO
     {
-        $this->pool->close();
+        return $this->getPool();
+    }
+
+    public function disconnect() 
+    {
+        print_r("disconnect\n");
+        
         parent::disconnect();
     }
 

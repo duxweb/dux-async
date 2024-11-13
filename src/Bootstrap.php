@@ -9,6 +9,7 @@ use Core\Command\Command;
 use Core\Database\BackupCommand;
 use Core\Database\RestoreCommand;
 use Core\Middleware\StaticMiddleware;
+use Core\Utils\Fmt;
 use Core\View\View;
 use Core\Web\WebCommand;
 use DI\DependencyException;
@@ -31,13 +32,13 @@ class Bootstrap
         error_reporting(E_ALL ^ E_DEPRECATED ^ E_WARNING);
     }
 
-
     /**
      * 注册公共函数
      * @return void
      */
     public function registerFunc(): void
     {
+        Fmt::init();
         require_once "Func/Response.php";
         require_once "Func/Common.php";
     }

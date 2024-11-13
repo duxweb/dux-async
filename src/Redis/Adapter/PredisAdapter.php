@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Database\Redis;
+namespace Core\Redis\Adapter;
 
 class PredisAdapter
 {
@@ -14,7 +14,6 @@ class PredisAdapter
             'timeout' => (float)$options['timeout'],
             'prefix' => $options['optPrefix'],
             'password' => $options['password'],
-            'database' => $options['database'] ?: 0,
         ]);
     }
 

@@ -4,20 +4,27 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\Cache\Cache;
 use Core\Config\TomlLoader;
+use Core\Coroutine\Worker;
 use Core\Database\Migrate;
 use Core\Event\Event;
+use Core\Lock\Lock;
 use Core\Logs\LogHandler;
+use Core\Redis\Redis;
 use Core\Translation\TomlFileLoader;
+use Core\Utils\Fmt;
 use DI\Container;
 use Dotenv\Dotenv;
-use Dux\Database\Db;
 use Illuminate\Database\Capsule\Manager;
 use Monolog\Level;
 use Monolog\Logger;
 use Noodlehaus\Config;
-use Swoole\Runtime;
+use Symfony\Component\Cache\Psr16Cache;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Translation\Translator;
+use function Termwind\render;
+use function Termwind\style;
 
 class App
 {
@@ -30,23 +37,29 @@ class App
     public static Bootstrap $bootstrap;
     public static Container $di;
     public static array $config;
+    public static string $version = '0.0.1';
     public static array $registerApp = [];
-
-    public static function create(string $basePath, int $port, string $lang = 'en-US', string $timezone = 'UTC')
+    public static bool $debug = true;
+    public static string $logo = '';
+    public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = null, ?int $port = null, ?bool $debug = true, ?string $logo = '')
     {
+        self::$logo = $logo;
+        self::$debug = $debug;
+
         self::$basePath = $basePath;
         self::$configPath = $basePath . '/config';
         self::$dataPath = $basePath . '/data';
         self::$publicPath = $basePath . '/public';
         self::$appPath = $basePath . '/app';
-
         $dotenv = Dotenv::createImmutable(self::$basePath);
         $dotenv->safeLoad();
 
         self::$di = new Container();
         self::$di->set('locale', $lang);
         self::$di->set('timezone', $timezone);
-        self::$di->set('port', $port);
+        self::$di->set('port', $port ?? 8900);
+        self::$di->set('host', $host ?? '127.0.0.1');
+        self::$di->set('debug', $debug);
 
 
         self::$bootstrap = new \Core\Bootstrap();
@@ -96,6 +109,67 @@ class App
         return self::$di->get("db.migrate");
     }
 
+    public static function lock(?string $type = null): LockFactory
+    {
+        $config = self::config("app");
+        $type = $type ?? $config->get("lock.type", "memory");
+
+        if (!self::$di->has("lock." . $type)) {
+            self::$di->set(
+                "lock." . $type,
+                Lock::init($type)
+            );
+        }
+        return self::$di->get("lock." . $type);
+    }
+
+    public static function cache(?string $type = null): Psr16Cache
+    {
+        $config = self::config("app");
+        $type = $type ?? $config->get("cache.type", "memory");
+
+        if (!self::$di->has("cache." . $type)) {
+            self::$di->set(
+                "cache." . $type,
+                new Cache($type, $config->get("cache", []))
+            );
+        }
+        return self::$di->get("cache." . $type)->factory();
+    }
+
+    public static function redis(string $name = "default", int $database = 0): \Predis\ClientInterface|\Redis
+    {
+        if (!self::$di->has("redis." . $name)) {
+            Fmt::Println('Init Redis', $name);
+            $config = self::config("database")->get("redis.drivers." . $name);
+            $redis = new Redis($config);
+            self::$di->set(
+                "redis." . $name,
+                $redis
+            );
+        }
+        $redis = self::$di->get("redis." . $name)->factory();
+        $redis->select($database);
+        return $redis;
+    }
+
+    public static function worker(): Worker
+    {
+        if (!self::$di->has("worker")) {
+            self::$di->set("worker", new Worker(
+                \Core\App::config("app")->get('worker', [
+                'capacity' => 1000,
+                'nonblocking' => false,
+                'max_queue_size' => 100000,
+                'expiry_duration' => 10,
+                'min_workers' => 10,
+                ]),
+                logger: App::log('worker', App::$debug ? Level::Debug : Level::Info),
+            ));
+        }
+        return self::$di->get("worker");
+    }
+
     public static function event(): Event
     {
         if (self::$di->has("events")) {
@@ -138,18 +212,18 @@ class App
         }
     }
 
-    public static function log(string $app = "app"): Logger
+    public static function log(string $app = "app", Level $level = Level::Debug): Logger
     {
         if (!self::$di->has("logger." . $app)) {
             self::$di->set(
                 "logger." . $app,
-                LogHandler::init($app, Level::Debug)
+                LogHandler::init($app, $level)
             );
         }
         return self::$di->get("logger." . $app);
     }
 
-    public static function config(string $name)
+    public static function config(string $name): Config
     {
         if (self::$di->has("config." . $name)) {
             return self::$di->get("config." . $name);
@@ -168,6 +242,56 @@ class App
         $config = new Config($file, new TomlLoader(), $string);
         self::$di->set("config." . $name, $config);
         return $config;
+    }
+
+    public static function banner()
+    {
+        $logo = self::$logo ?: null;
+        $version = self::$version;
+        $host = self::$di->get('host');
+        $port = self::$di->get('port');
+        $time = date('Y-m-d H:i:s');
+        $debug = App::$debug ? 'true' : 'false';
+
+        $swooleVersion = SWOOLE_VERSION;
+        $phpVersion = phpversion();
+        $pid = getmypid();
+
+
+        $banner = $logo ? <<<HTML
+        <div class="mb-1">
+            <pre>{$logo}</pre>
+        </div>
+        HTML : null;
+
+        render(<<<HTML
+            <div class="">
+                {$banner}
+                <div class="flex">
+                    <span class="mr-1">⇨ </span>
+                    <span class="mr-1">Version</span>
+                    <span class="text-green mr-2">{$version}</span>
+                    <span class="mr-1">PHP</span>
+                    <span class="text-green mr-2">{$phpVersion}</span>
+                    <span class="mr-1">Swoole</span>
+                    <span class="text-green mr-2">{$swooleVersion}</span>
+                    <span class="mr-1">Debug</span>
+                    <span class="text-green mr-2">{$debug}</span>
+                    <span class="mr-1">PID</span>
+                    <span class="text-green mr-2">{$pid}</span>
+                </div>
+                <div>
+                    <span class="mr-1">⇨ </span>
+                    <span>Start time</span>
+                    <span class="text-cyan ml-1">{$time}</span>
+                </div>
+                <div>
+                    <span class="mr-1">⇨ </span>
+                    <span>Web server</span>
+                    <span class="text-cyan ml-1">http://{$host}:{$port}</span>
+                </div>
+            </div>
+        HTML);
     }
 
 }

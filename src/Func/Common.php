@@ -6,6 +6,15 @@ use Core\App;
 use Core\Handlers\ExceptionBusiness;
 use Symfony\Component\VarDumper\VarDumper;
 
+if (!function_exists('dd')) {
+    
+    function dd(...$vars): void
+    {
+        foreach ($vars as $v) {
+            dump($v);
+        }
+    }
+}
 
 if (!function_exists('base_path')) {
     function base_path(string $path = ""): string
@@ -73,14 +82,6 @@ if (!function_exists('dux_debug')) {
             VarDumper::dump($v);
         }
         die;
-    }
-}
-
-
-if (!function_exists('clock')) {
-    function clock(): \Clockwork\Clockwork
-    {
-        return App::di()->get('clock');
     }
 }
 

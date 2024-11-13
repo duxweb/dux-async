@@ -45,7 +45,12 @@
         "chubbyphp/chubbyphp-swoole-request-handler": "^1.4",
         "slim/psr7": "^1.7",
         "ext-zlib": "*",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "nunomaduro/termwind": "^2.2",
+        "symfony/var-dumper": "^7.1",
+        "predis/predis": "^2.2",
+        "symfony/cache": "^7.1",
+        "symfony/lock": "^7.1"
     },
     "autoload": {
         "psr-4": {
@@ -54,6 +59,16 @@
         }
     },
     "require-dev": {
-        "swoole/ide-helper": "^5.1"
+        "swoole/ide-helper": "^5.1",
+        "pestphp/pest": "^3.5",
+        "pestphp/pest-plugin-stressless": "^3.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": "./vendor/bin/pest"
     }
 }

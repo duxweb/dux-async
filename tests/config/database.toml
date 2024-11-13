@@ -1,0 +1,4 @@
+[db.drivers.default]
+driver = "sqlite"
+database = "database/test.sqlite"
+prefix = "test_"

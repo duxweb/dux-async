@@ -5,60 +5,50 @@ namespace Core\Coroutine;
 use Closure;
 use Exception;
 use Psr\Log\LoggerInterface;
-use Swoole\Coroutine;
+use Swoole\Atomic;
 use Swoole\Coroutine\Channel;
 use Swoole\Timer;
+use WeakMap;
 
 class Pool
 {
+    private WeakMap $connections;
     private Channel $channel;
+    private Atomic $currentSize;
     private bool $running = true;
-    private int $currentSize = 0;
-    private array $idleConnections = [];
 
     public function __construct(
-        // 创建连接的回调函数
         private readonly Closure          $callback,
-        // 最小连接数
-        private readonly int              $minSize = 30,
-        // 最大连接数
-        private readonly int              $maxSize = 300,
-        // 获取连接的超时时间
+        private readonly int              $maxIdle = 30,
+        private readonly int              $maxOpen = 300,
         private readonly int              $timeOut = 10,
-        // 空闲连接的时长
         private readonly int              $idleTime = 60,
-        // 日志记录器
         private readonly ?LoggerInterface $logger = null,
-        // 是否开启调试模式
-        private readonly bool             $debug = false
+        private readonly ?Closure         $close = null,
     )
     {
-        $this->channel = new Channel($this->maxSize);
+        $this->connections = new WeakMap();
+        $this->channel = new Channel($this->maxOpen);
+        $this->currentSize = new Atomic(0);
         $this->startHealthCheck();
     }
 
-    public function pull(): void
+    public function create(): mixed
     {
-        for ($i = 0; $i < $this->minSize; $i++) {
-            $this->add();
-        }
-    }
-
-    public function add(): mixed
-    {
-        if ($this->currentSize >= $this->maxSize) {
+        if ($this->currentSize->get() >= $this->maxOpen) {
             $this->logger?->warning('Max pool size reached');
             return null;
         }
 
         try {
             $conn = call_user_func($this->callback);
-            $this->channel->push($conn);
-            $this->currentSize++;
-            $this->idleConnections[spl_object_id($conn)] = time(); // 记录连接的空闲时间
-            if ($this->debug) {
-                $this->logger?->info('Connection added', ['current_size' => $this->currentSize]);
+            if (!$conn) {
+                return null;
             }
+            $this->logger?->debug('Created new connection', [
+                'current_size' => $this->currentSize->get()
+            ]);
+            $this->currentSize->add(1);
             return $conn;
         } catch (Exception $e) {
             $this->logger?->error('Failed to create connection', ['error' => $e->getMessage()]);
@@ -66,147 +56,169 @@ class Pool
         }
     }
 
+    public function put($conn): void
+    {
+        if (!$conn) {
+            return;
+        }
+
+        if (!$this->running) {
+            $this->currentSize->sub(1);
+            if ($this->close) {
+                try {
+                    call_user_func($this->close, $conn);
+                } catch (Exception $e) {
+                    $this->logger?->error('Failed to close connection', ['error' => $e->getMessage()]);
+                }
+            }
+            return;
+        }
+
+        if (isset($this->connections[$conn])) {
+            $this->logger?->warning('Connection already in pool', [
+                'idle_time' => time() - $this->connections[$conn]
+            ]);
+            return;
+        }
+
+        if ($this->channel->isFull()) {
+            $this->currentSize->sub(1);
+            if ($this->close) {
+                try {
+                    call_user_func($this->close, $conn);
+                } catch (Exception $e) {
+                    $this->logger?->error('Failed to close connection', ['error' => $e->getMessage()]);
+                }
+            }
+            return;
+        }
+
+        if ($this->channel->push($conn)) {
+            $this->connections[$conn] = time();
+            $this->logger?->debug('Connection returned to pool', [
+                'current_size' => $this->currentSize->get(),
+                'idle_count' => count($this->connections)
+            ]);
+        } else {
+            $this->currentSize->sub(1);
+        }
+    }
+
     public function get(): mixed
     {
-        if ($this->debug) {
-            $this->logger?->debug('Pool status', ['isEmpty' => $this->channel->isEmpty()]);
+        $this->logger?->debug('Getting connection', [
+            'current_size' => $this->currentSize->get(),
+            'idle_count' => count($this->connections)
+        ]);
+
+        $conn = null;
+        if ($this->channel->isEmpty() && $this->currentSize->get() < $this->maxOpen) {
+            $conn = $this->create();
+            return $conn;
         }
 
-        if ($this->channel->isEmpty() && $this->currentSize < $this->maxSize) {
-            if ($this->debug) {
-                $this->logger?->debug('Adding new connection', ['current_size' => $this->currentSize]);
-            }
-            return $this->add();
-        }
-
-        if ($this->debug) {
-            $this->logger?->debug('Getting connection', ['coroutine_id' => Coroutine::getCid()]);
-        }
-        $conn = $this->channel->pop($this->timeOut * 1000);
-
+        $conn = $this->channel->pop($this->timeOut);
         if (!$conn) {
-            throw new Exception('Connection pool timeout');
+            $conn = $this->create();
+            return $conn;
         }
 
-        unset($this->idleConnections[spl_object_id($conn)]); // 移除空闲记录
-
-        if (!$this->validateConnection($conn)) {
-            $this->logger?->warning('Invalid connection, creating new one');
-            $this->currentSize--;
-            return $this->add();
+        if ($conn) {
+            unset($this->connections[$conn]);
+            $this->logger?->debug('Connection retrieved from pool', [
+                'current_size' => $this->currentSize->get()
+            ]);
         }
 
         return $conn;
     }
 
-    public function put($conn): void
-    {
-        if ($conn === null) {
-            $this->logger?->warning('Attempted to release a null connection');
-            return;
-        }
-
-        if ($this->channel->isFull()) {
-            $this->closeConnection($conn);
-            $this->currentSize--;
-            return;
-        }
-
-        if ($this->debug) {
-            $this->logger?->debug('Releasing connection', [
-                'coroutine_id' => Coroutine::getCid(),
-                'pool_size' => $this->channel->length()
-            ]);
-        }
-
-        $this->idleConnections[spl_object_id($conn)] = time();
-        $this->channel->push($conn);
-    }
-
-    private function validateConnection($conn): bool
-    {
-        if (method_exists($conn, 'ping')) {
-            return $conn->ping();
-        }
-        return true;
-    }
-
-    private function closeConnection($conn): void
-    {
-        if (method_exists($conn, 'close')) {
-            $conn->close();
-        }
-    }
-
     private function startHealthCheck(): void
     {
         Timer::tick(10 * 1000, function () {
-            if ($this->debug) {
-                $this->logger?->debug('Running health check');
-            }
-            $currentTime = time();
-            foreach ($this->idleConnections as $id => $lastUsed) {
-                if ($currentTime - $lastUsed > $this->idleTime && $this->currentSize > $this->minSize) {
-                    $this->logger?->info('Closing idle connection', ['connection_id' => $id]);
-                    $conn = $this->channel->pop();
-                    if ($conn) {
-                        $this->closeConnection($conn);
-                        unset($this->idleConnections[$id]);
-                        $this->currentSize--;
+            try {
+                while ($this->currentSize->get() > $this->maxIdle) {
+                    $conn = $this->channel->pop(0.001);
+                    if (!$conn) {
+                        break;
                     }
+
+                    $lastUsed = $this->connections[$conn] ?? 0;
+                    $currentTime = time();
+
+                    if ($currentTime - $lastUsed <= $this->idleTime) {
+                        $this->channel->push($conn);
+                        break;
+                    }
+
+                    unset($this->connections[$conn]);
+                    $this->currentSize->sub(1);
+                    if ($this->close) {
+                        try {
+                            call_user_func($this->close, $conn);
+                        } catch (Exception $e) {
+                            $this->logger?->error('Failed to close idle connection',
+                                ['error' => $e->getMessage()]);
+                        }
+                    }
+                    $this->logger?->debug('Closed idle connection', [
+                        'idle_time' => $currentTime - $lastUsed
+                    ]);
                 }
+            } catch (Exception $e) {
+                $this->logger?->error('Health check failed', ['error' => $e->getMessage()]);
             }
         });
     }
 
     public function close(): void
     {
-        $this->running = false;
-        while (!$this->channel->isEmpty()) {
-            $conn = $this->channel->pop();
-            $this->closeConnection($conn);
-            $this->currentSize--;
+        if (!$this->running) {
+            return;
         }
-        $this->channel->close();
+
+        $this->running = false;
+        try {
+            while (!$this->channel->isEmpty()) {
+                $conn = $this->channel->pop(0.001);
+                if ($conn) {
+                    unset($this->connections[$conn]);
+                    $this->currentSize->sub(1);
+
+                    if ($this->close) {
+                        try {
+                            call_user_func($this->close, $conn);
+                        } catch (Exception $e) {
+                            $this->logger?->error('Failed to close connection during shutdown',
+                                ['error' => $e->getMessage()]);
+                        }
+                    }
+                }
+            }
+        } finally {
+            $this->channel->close();
+        }
     }
 
     public function __destruct()
     {
-        $this->close();
-    }
-
-    public function getIdleConnections(): array
-    {
-        return $this->idleConnections;
+        if ($this->running) {
+            $this->close();
+        }
     }
 
     public function getCurrentSize(): int
     {
-        return $this->currentSize;
+        return $this->currentSize->get();
     }
 
-    public function getMaxSize(): int
+    public function getStatus(): array
     {
-        return $this->maxSize;
-    }
-
-    public function getMinSize(): int
-    {
-        return $this->minSize;
-    }
-
-    public function getTimeOut(): int
-    {
-        return $this->timeOut;
-    }
-
-    public function getIdleTime(): int
-    {
-        return $this->idleTime;
-    }
-
-    public function getRunning(): bool
-    {
-        return $this->running;
+        return [
+            'current_size' => $this->currentSize,
+            'idle_connections' => count($this->connections),
+            'channel_length' => $this->channel->length(),
+            'is_running' => $this->running,
+        ];
     }
 }
