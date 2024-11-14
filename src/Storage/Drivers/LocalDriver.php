@@ -28,12 +28,12 @@ class LocalDriver implements StorageInterface
         
         if (!is_dir($dir)) {
             if (!mkdir($dir, 0777, true)) {
-                throw new StorageException("无法创建目录: {$dir}");
+                throw new StorageException("Failed to create directory: {$dir}");
             }
         }
         
         if (file_put_contents($fullPath, $contents) === false) {
-            throw new StorageException("写入文件失败: {$path}");
+            throw new StorageException("Failed to write file: {$path}");
         }
         
         return true;
@@ -46,18 +46,18 @@ class LocalDriver implements StorageInterface
         
         if (!is_dir($dir)) {
             if (!mkdir($dir, 0777, true)) {
-                throw new StorageException("无法创建目录: {$dir}");
+                throw new StorageException("Failed to create directory: {$dir}");
             }
         }
         
         $dest = fopen($fullPath, 'wb');
         if ($dest === false) {
-            throw new StorageException("无法创建文件: {$path}");
+            throw new StorageException("Failed to create file: {$path}");
         }
         
         try {
             if (stream_copy_to_stream($resource, $dest) === false) {
-                throw new StorageException("写入文件流失败: {$path}");
+                throw new StorageException("Failed to write stream: {$path}");
             }
         } finally {
             fclose($dest);
@@ -69,9 +69,13 @@ class LocalDriver implements StorageInterface
     public function read(string $path): string
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
-        $contents = @file_get_contents($fullPath);
+        if (!is_readable($fullPath)) {
+            throw new StorageException("File not readable or not found: {$path}");
+        }
+        
+        $contents = file_get_contents($fullPath);
         if ($contents === false) {
-            throw new StorageException("读取文件失败: {$path}");
+            throw new StorageException("Failed to read file: {$path}");
         }
         return $contents;
     }
@@ -79,9 +83,13 @@ class LocalDriver implements StorageInterface
     public function readStream(string $path)
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
-        $stream = @fopen($fullPath, 'rb');
+        if (!is_readable($fullPath)) {
+            throw new StorageException("File not readable or not found: {$path}");
+        }
+        
+        $stream = fopen($fullPath, 'rb');
         if ($stream === false) {
-            throw new StorageException("打开文件流失败: {$path}");
+            throw new StorageException("Failed to open stream: {$path}");
         }
         return $stream;
     }
@@ -92,8 +100,11 @@ class LocalDriver implements StorageInterface
         if (!file_exists($fullPath)) {
             return true;
         }
-        if (!@unlink($fullPath)) {
-            throw new StorageException("删除文件失败: {$path}");
+        if (!is_writable($fullPath)) {
+            throw new StorageException("Permission denied: {$path}");
+        }
+        if (!unlink($fullPath)) {
+            throw new StorageException("Failed to delete file: {$path}");
         }
         return true;
     }
@@ -101,9 +112,13 @@ class LocalDriver implements StorageInterface
     public function size(string $path): int
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
-        $size = @filesize($fullPath);
+        if (!file_exists($fullPath)) {
+            throw new StorageException("File not found: {$path}");
+        }
+        
+        $size = filesize($fullPath);
         if ($size === false) {
-            throw new StorageException("获取文件大小失败: {$path}");
+            throw new StorageException("Failed to get file size: {$path}");
         }
         return $size;
     }
