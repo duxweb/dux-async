@@ -79,7 +79,9 @@ class Migrate
             $correctIndexName = str_replace('table_', '', $indexName);
             $tempTableDetails->renameIndex($indexName, $correctIndexName);
         }
-        $diff = (new Comparator)->compareTables($modelTableDetails, $tempTableDetails);
+        $platform = $manager->getDatabasePlatform();
+        $comparator = new Comparator($platform);
+        $diff = $comparator->compareTables($modelTableDetails, $tempTableDetails);
         if ($diff) {
             $manager->alterTable($diff);
         }
@@ -90,16 +92,14 @@ class Migrate
     // 注册迁移模型
     public function registerAttribute(): void
     {
-        $attributes = (array)App::di()->get("attributes");
-        foreach ($attributes as $attribute => $list) {
-            if (
-                $attribute !== AutoMigrate::class
-            ) {
-                continue;
-            }
-            foreach ($list as $vo) {
-                $class = $vo["class"];
-                $this->register($class);
+        $attributes = App::attributes();
+
+        foreach ($attributes as $item) {
+            foreach ($item["annotations"] as $annotation) {
+                if ($annotation["name"] != AutoMigrate::class) {
+                    continue;
+                }
+                $this->register($annotation["class"]);
             }
         }
     }

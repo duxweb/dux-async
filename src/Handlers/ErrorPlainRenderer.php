@@ -7,9 +7,4 @@ use Slim\Error\Renderers\PlainTextErrorRenderer;
 
 class ErrorPlainRenderer extends PlainTextErrorRenderer
 {
-    use ErrorRendererTrait;
-    public function __construct() {
-        $this->defaultErrorTitle = App::$bootstrap->exceptionTitle;
-        $this->defaultErrorDescription = App::$bootstrap->exceptionDesc;
-    }
 }

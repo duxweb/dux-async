@@ -9,8 +9,6 @@ use Chubbyphp\SwooleRequestHandler\PsrRequestFactory;
 use Chubbyphp\SwooleRequestHandler\SwooleResponseEmitter;
 use Core\App;
 use Core\Coroutine\ContextManage;
-use Core\Database\Db;
-use Core\Func\Fmt;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;
 use Slim\Psr7\Factory\UploadedFileFactory;
@@ -27,8 +25,7 @@ class WebCommand extends Command
 
     protected function configure(): void
     {
-        $this->setName("web")->setDescription('Web service start')
-            ->addArgument('workermanArgs', InputArgument::IS_ARRAY, 'Arguments for Workerman (start, stop, reload)');
+        $this->setName("web:start")->setDescription('Web service start');
     }
 
     public function execute(InputInterface $input, OutputInterface $output): int
@@ -36,7 +33,6 @@ class WebCommand extends Command
 
         Runtime::enableCoroutine();
         ContextManage::init();
-
 
         run(function () {
 

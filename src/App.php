@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\App\Attribute;
 use Core\Cache\Cache;
 use Core\Config\TomlLoader;
 use Core\Coroutine\Worker;
@@ -14,9 +15,11 @@ use Core\Logs\LogHandler;
 use Core\Redis\Redis;
 use Core\Translation\TomlFileLoader;
 use Core\Utils\Fmt;
+use Core\Views\Render;
 use DI\Container;
 use Dotenv\Dotenv;
 use Illuminate\Database\Capsule\Manager;
+use Latte\Engine;
 use Monolog\Level;
 use Monolog\Logger;
 use Noodlehaus\Config;
@@ -24,7 +27,6 @@ use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Translation\Translator;
 use function Termwind\render;
-use function Termwind\style;
 
 class App
 {
@@ -41,10 +43,14 @@ class App
     public static array $registerApp = [];
     public static bool $debug = true;
     public static string $logo = '';
+    public static string $lang = '';
+    public static string $timezone = '';
     public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = null, ?int $port = null, ?bool $debug = true, ?string $logo = '')
     {
         self::$logo = $logo;
+        self::$lang = $lang;
         self::$debug = $debug;
+        self::$timezone = $timezone;
 
         self::$basePath = $basePath;
         self::$configPath = $basePath . '/config';
@@ -55,7 +61,7 @@ class App
         $dotenv->safeLoad();
 
         self::$di = new Container();
-        self::$di->set('locale', $lang);
+        self::$di->set('lang', $lang);
         self::$di->set('timezone', $timezone);
         self::$di->set('port', $port ?? 8900);
         self::$di->set('host', $host ?? '127.0.0.1');
@@ -66,7 +72,6 @@ class App
         self::$bootstrap->registerFunc();
         self::$bootstrap->registerConfig();
         self::$bootstrap->registerWeb();
-        self::$bootstrap->registerView();
     }
 
     public static function run()
@@ -153,6 +158,17 @@ class App
         return $redis;
     }
 
+    public static function view(string $name): Engine
+    {
+        if (!self::$di->has("view." . $name)) {
+            self::$di->set(
+                "view." . $name,
+                Render::init($name)
+            );
+        }
+        return self::$di->get("view." . $name);
+    }
+
     public static function worker(): Worker
     {
         if (!self::$di->has("worker")) {
@@ -183,12 +199,56 @@ class App
         );
         return $event;
     }
+    
+    public static function attributes(): array
+    {
+        if (self::$di->has("attributes")) {
+            return self::$di->get("attributes");
+        }
+
+        $attributes = Attribute::load(self::$registerApp);
+
+        self::$di->set("attributes", $attributes);
+        return $attributes;
+    }
+    
+    public static function permission(): Permission\Register
+    {
+        if (self::$di->has("permission")) {
+            return self::$di->get("permission");
+        }
+
+        $permission = new Permission\Register();
+        self::$di->set("permission", $permission);
+        return $permission;
+    }
+
+    public static function resource(): Resources\Register
+    {
+        if (self::$di->has("resource")) {
+            return self::$di->get("resource");
+        }
+
+        $resource = new Resources\Register();
+        self::$di->set("resource", $resource);
+        return $resource;
+    }
+
+    public static function route(): Route\Register
+    {
+        if (self::$di->has("route")) {
+            return self::$di->get("route");
+        }
+
+        $route = new Route\Register();
+        self::$di->set("route", $route);
+        return $route;
+    }
 
     public static function trans(): Translator
     {
         if (!self::$di->has("trans")) {
-            $lang = self::$di->get('locale') ?: 'en-US';
-            $translator = new Translator($lang);
+            $translator = new Translator(self::$lang);
             $translator->addLoader('toml', new TomlFileLoader());
             self::loadTrans(__DIR__ . '/Langs', $translator);
             self::$di->set(

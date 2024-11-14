@@ -4,9 +4,7 @@ declare(strict_types=1);
 namespace Core\Event;
 
 use Core\App;
-use Core\Event\Attribute\AppListener;
 use Core\Event\Attribute\Listener;
-use RuntimeException;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Event extends EventDispatcher
@@ -22,32 +20,16 @@ class Event extends EventDispatcher
     
     public function registerAttribute(): void
     {
-        $attributes = (array)App::di()->get("attributes");
-        foreach ($attributes as $attribute => $list) {
-            if (
-                $attribute !== Listener::class && $attribute !== AppListener::class
-            ) {
-                continue;
-            }
-            $app = $attribute === AppListener::class;
-            foreach ($list as $vo) {
-                [$class, $method] = explode(':', $vo["class"]);
-                $params = $vo["params"];
+        $attributes = App::attributes();
 
-                if ($app) {
-                    $name = $params["name"] . '.' . $params["class"];
-                }else {
-                    $name = $params["name"];
+        foreach ($attributes as $item) {
+            foreach ($item["annotations"] as $annotation) {
+                if ($annotation["name"] != Listener::class) {
+                    continue;
                 }
-
-                if ($app && (!$params["name"] || !$params["class"])) {
-                    throw new RuntimeException("method [$class:$method] The annotation is missing the name or class parameter");
-                }
-                if (!$app && !$params["name"]) {
-                    throw new RuntimeException("method [$class:$method] The annotation is missing the name parameter");
-                }
-
-                $this->addListener($name, [new $class, $method], (int)$params["priority"] ?: 0);
+                $params = $annotation["params"];
+                [$class, $method] = explode(':', $annotation["class"]);
+                $this->addListener($params["name"], [new $class, $method], (int)$params["priority"] ?: 0);
             }
         }
     }

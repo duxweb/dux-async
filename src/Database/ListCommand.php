@@ -11,9 +11,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ListCommand extends Command {
 
-    protected static $defaultName = 'db:list';
-    protected static $defaultDescription = 'View the list of automatic migration models';
-
+    protected function configure(): void
+    {
+        $this->setName("db:list")->setDescription('View the list of automatic migration models');
+    }
 
     public function execute(InputInterface $input, OutputInterface $output): int {
 

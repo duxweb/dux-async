@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use Core\App;
+use Core\Coroutine\ContextManage;
 use Core\Handlers\ExceptionBusiness;
 use Symfony\Component\VarDumper\VarDumper;
 
@@ -61,9 +62,9 @@ if (!function_exists('sys_path')) {
 }
 
 if (!function_exists('now')) {
-    function now(): Carbon
+    function now(DateTimeZone|string|int|null $timezone = null): Carbon
     {
-        return Carbon::now();
+        return Carbon::now($timezone);
     }
 }
 
@@ -186,7 +187,7 @@ if (!function_exists('__')) {
             }
         }
 
-        return App::trans()->trans($value, $parameters, $domain, App::di()->get('language'));
+        return App::trans()->trans($value, $parameters, $domain, ContextManage::context()->getValue('lang'));
     }
 }
 

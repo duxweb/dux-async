@@ -2,22 +2,45 @@
 
 namespace Core\Middleware;
 
-use Amp\Http\Server\Middleware;
-use Amp\Http\Server\Request;
-use Amp\Http\Server\RequestHandler;
-use Amp\Http\Server\Response;
 use Core\App;
+use Core\Coroutine\Context;
+use Core\Coroutine\ContextManage;
+use Core\Utils\Fmt;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use Slim\Routing\RouteContext;
+use Swoole\Coroutine;
 
-final class LangMiddleware implements Middleware
+final class LangMiddleware implements MiddlewareInterface
 {
-
-    public function handleRequest(Request $request, RequestHandler $requestHandler): Response
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $lang = $request->getHeader('Accept-Language');
-        $lang = explode(',', $lang)[0];
-        App::di()->set('lang', $lang);
+        $acceptLanguage = $request->getHeaderLine('Accept-Language');
+        $lang = $this->parseAcceptLanguage($acceptLanguage);
+        
+        ContextManage::context()->setValue('lang', $lang);
+        $request = $request->withAttribute('lang', $lang);
+        return $handler->handle($request);
+    }
 
-        $response = $requestHandler->handleRequest($request);
-        return $response;
+    private function parseAcceptLanguage(string $acceptLanguage): string
+    {
+        if (empty($acceptLanguage)) {
+            return 'en-US';
+        }
+        
+        $languages = explode(',', $acceptLanguage);
+        
+        $primaryLang = trim($languages[0]);
+        
+        if (str_contains($primaryLang, ';')) {
+            $primaryLang = explode(';', $primaryLang)[0];
+        }
+        
+        return trim($primaryLang);
     }
 }

@@ -5,9 +5,8 @@ namespace Core\App;
 
 use Core\Bootstrap;
 
-class AppExtend
+abstract class AppExtend
 {
-
     /**
      * @param Bootstrap $app
      * @return void

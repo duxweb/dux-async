@@ -45,6 +45,13 @@ function sendText(ResponseInterface $response, string $message, int $code = 200)
         ->withStatus($code);
 }
 
+function sendTpl(ResponseInterface $response, string $tpl, array $data = [], string $name = 'web', int $code = 200): ResponseInterface
+{
+    $view = \Core\App::view($name);
+    $html = $view->renderToString($tpl, $data);
+    return sendText($response, $html, $code);
+}
+
 /**
  * @param string $name
  * @param array $params
@@ -52,9 +59,8 @@ function sendText(ResponseInterface $response, string $message, int $code = 200)
  */
 function url(string $name, array $params): string
 {
-    return App::app()->getRouteCollector()->getRouteParser()->urlFor($name, $params);
+    return App::web()->getRouteCollector()->getRouteParser()->urlFor($name, $params);
 }
-
 
 /**
  * @param Collection|LengthAwarePaginator|Model|null $data

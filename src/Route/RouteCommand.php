@@ -15,17 +15,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 class RouteCommand extends Command
 {
 
-    protected static $defaultName = 'route';
-    protected static $defaultDescription = 'show route list';
-
-
     protected function configure(): void
     {
-        $this->addArgument(
-            'group',
-            InputArgument::OPTIONAL,
-            'please enter the route group name'
-        );
+        $this->setName("route:list")->setDescription('show route list');
+        $this->addArgument('group', InputArgument::OPTIONAL, 'please enter the route group name');
     }
 
     public function execute(InputInterface $input, OutputInterface $output): int
@@ -33,9 +26,9 @@ class RouteCommand extends Command
 
         $group = $input->getArgument("group");
         if ($group) {
-            $routeList = [$group => App::$bootstrap->route->get($group)];
+            $routeList = [$group => App::route()->get($group)];
         } else {
-            $routeList = App::$bootstrap->route->app;
+            $routeList = App::route()->app;
         }
 
         foreach ($routeList as $key => $item) {

@@ -17,7 +17,7 @@ class Route
      * @param string $pattern
      * @param object ...$middleware
      */
-    public function __construct(public string $pattern = "", object ...$middleware)
+    public function __construct(public string $pattern = "", public ?string $name = "", object ...$middleware)
     {
         $this->middleware = $middleware;
     }
@@ -33,9 +33,9 @@ class Route
      * @param object ...$middleware
      * @return Route
      */
-    public function group(string $pattern, object ...$middleware): Route
+    public function group(string $pattern, ?string $name = "", object ...$middleware): Route
     {
-        $group = new Route($pattern, ...$middleware);
+        $group = new Route($pattern, $name ? ($this->name ? $this->name . "." . $name : $name) : '', ...$middleware);
         $group->setApp($this->app);
         $this->group[] = $group;
         return $group;
@@ -136,21 +136,14 @@ class Route
     public static array $actions = ['list', 'show', 'create', 'edit', 'store', 'delete'];
 
     /**
-     * @param string $pattern
+     * resources
      * @param string $class
-     * @param string $name
      * @param array|false $actions
      * @param bool $softDelete
-     * @param array $middleware
      * @return Route
      */
-    public function resources(string $pattern, string $class, string $name, array|false $actions = [], bool $softDelete = false, array $middleware = []): Route
+    public function resources(string $class, array|false $actions = [], bool $softDelete = false): self
     {
-        $group = $this->group($pattern, ...$middleware);
-
-        if ($actions === false) {
-            return $group;
-        }
 
         if (!$actions) {
             $actions = self::$actions;
@@ -163,31 +156,31 @@ class Route
         }
 
         if (in_array("list", $actions)) {
-            $group->get('', "$class:list", "$name.list", 100);
+            $this->get('', "$class:list", "list", 100);
         }
         if (in_array("show", $actions)) {
-            $group->get("/{id:[0-9]+}", "$class:show", "$name.show", 100);
+            $this->get("/{id:[0-9]+}", "$class:show", "show", 100);
         }
         if (in_array("create", $actions)) {
-            $group->post("", "$class:create", "$name.create", 100);
+            $this->post("", "$class:create", "create", 100);
         }
         if (in_array("edit", $actions)) {
-            $group->put("/{id:[0-9]+}", "$class:edit", "$name.edit", 100);
+            $this->put("/{id:[0-9]+}", "$class:edit", "edit", 100);
         }
         if (in_array("store", $actions)) {
-            $group->patch("/{id:[0-9]+}", "$class:store", "$name.store", 100);
+            $this->patch("/{id:[0-9]+}", "$class:store", "store", 100);
         }
         if (in_array("delete", $actions)) {
-            $group->delete("/{id:[0-9]+}", "$class:delete", "$name.delete", 100);
-            $group->delete("", "$class:deleteMany", "$name.deleteMany", 100);
+            $this->delete("/{id:[0-9]+}", "$class:delete", "delete", 100);
+            $this->delete("", "$class:deleteMany", "deleteMany", 100);
         }
         if (in_array("trash", $actions)) {
-            $group->delete("/{id:[0-9]+}/trash", "$class:trash", "$name.trash", 100);
+            $this->delete("/{id:[0-9]+}/trash", "$class:trash", "trash", 100);
         }
         if (in_array("restore", $actions)) {
-            $group->put("/{id:[0-9]+}/restore", "$class:restore", "$name.restore", 100);
+            $this->put("/{id:[0-9]+}/restore", "$class:restore", "restore", 100);
         }
-        return $group;
+        return $this;
     }
 
     /**
@@ -200,13 +193,13 @@ class Route
      * @param int $priority
      * @return void
      */
-    public function map(array $methods, string $pattern, string|callable $callable, string $name, array $middleware = [], int $priority = 0): void
+    public function map(array $methods, string $pattern, string|callable $callable, ?string $name, array $middleware = [], int $priority = 0): void
     {
         $this->data[] = [
             "methods" => $methods,
             "pattern" => $pattern,
             "callable" => $callable,
-            "name" => $name,
+            "name" => $name ? ($this->name ? $this->name . "." . $name : $name) : '',
             "middleware" => $middleware ?: [],
             "priority" => $priority
         ];

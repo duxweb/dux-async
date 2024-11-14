@@ -7,14 +7,29 @@ use Carbon\Carbon;
 use Core\App\Attribute;
 use Core\Command\Command;
 use Core\Database\BackupCommand;
+use Core\Database\ListCommand;
+use Core\Database\MigrateCommand;
 use Core\Database\RestoreCommand;
+use Core\Handlers\ErrorHandler;
+use Core\Handlers\ErrorHtmlRenderer;
+use Core\Handlers\ErrorJsonRenderer;
+use Core\Handlers\ErrorPlainRenderer;
+use Core\Handlers\ErrorXmlRenderer;
+use Core\Handlers\ExceptionBusiness;
+use Core\Middleware\LangMiddleware;
+use Core\Middleware\RequestMiddleware;
 use Core\Middleware\StaticMiddleware;
+use Core\Permission\PermissionCommand;
+use Core\Resources\Resource;
+use Core\Route\RouteCommand;
 use Core\Utils\Fmt;
 use Core\View\View;
 use Core\Web\WebCommand;
 use DI\DependencyException;
 use DI\NotFoundException;
+use JimTools\JwtAuth\Exceptions\AuthorizationException;
 use Latte\Engine;
+use Middlewares\ContentLanguage;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
 use Symfony\Component\Console\Application;
@@ -23,8 +38,6 @@ class Bootstrap
 {
     public \Slim\App $web;
     public Engine $view;
-    public Resources\Register $resource;
-    public Route\Register $route;
     public Application $command;
 
     public function __construct()
@@ -50,17 +63,7 @@ class Bootstrap
     public function registerConfig(): void
     {
         date_default_timezone_set(App::di()->get('timezone'));
-        Carbon::setLocale(App::di()->get('locale'));
-    }
-
-
-    /**
-     * 注册视图服务
-     * @return void
-     */
-    public function registerView(): void
-    {
-        $this->view = View::init("app");
+        Carbon::setLocale(App::di()->get('lang'));
     }
 
     /**
@@ -72,10 +75,6 @@ class Bootstrap
         // 注册web服务
         AppFactory::setContainer(App::di());
         $this->web = AppFactory::create();
-
-        // 注册资源路由
-        $this->resource = new \Core\Resources\Register();
-        $this->route = new \Core\Route\Register();
     }
 
 
@@ -89,10 +88,21 @@ class Bootstrap
         $this->web->addBodyParsingMiddleware();
         // 注册路由中间件
         $this->web->addRoutingMiddleware();
-        // 注册异常中间件
-        $this->web->addErrorMiddleware(true, false, false);
+        // 注册请求中间件
+        $this->web->addMiddleware(new LangMiddleware);
+        $this->web->addMiddleware(new RequestMiddleware(App::log('request')));
+        // 注册授权异常
+        $errorMiddleware = $this->web->addErrorMiddleware(App::$debug, true, true);
+        // 注册异常
+        $errorHandler = new ErrorHandler($this->web->getCallableResolver(), $this->web->getResponseFactory());
+        $errorMiddleware->setDefaultErrorHandler($errorHandler);
+        $errorHandler->registerErrorRenderer("application/json", ErrorJsonRenderer::class);
+        $errorHandler->registerErrorRenderer("application/xml", ErrorXmlRenderer::class);
+        $errorHandler->registerErrorRenderer("text/xml", ErrorXmlRenderer::class);
+        $errorHandler->registerErrorRenderer("text/html", ErrorHtmlRenderer::class);
+        $errorHandler->registerErrorRenderer("text/plain", ErrorPlainRenderer::class);
 
-        $this->web->addMiddleware(new StaticMiddleware);
+        //$this->web->addMiddleware(new StaticMiddleware);
     }
 
 
@@ -110,19 +120,13 @@ class Bootstrap
             App::$registerApp[] = $vo;
         }
 
-        // 全局注解加载
-        App::di()->set("attributes", Attribute::load(App::$registerApp));
-
-        // 事件注解加载
-        App::event()->registerAttribute();
-
         // 应用初始化触发
         foreach ($appList as $vo) {
             call_user_func([new $vo, "init"], $this);
         }
 
         // 资源注册触发
-        foreach ($this->resource?->app as $resource) {
+        foreach (App::resource()->app as $resource) {
             $resource->run($this);
         }
 
@@ -132,13 +136,13 @@ class Bootstrap
         }
 
         // 注解资源注册
-        $this->resource->registerAttribute($this);
+        App::resource()->registerAttribute();
 
         // 注解路由注册
-        $this->route->registerAttribute($this);
+        App::route()->registerAttribute();
 
         // 普通路由注册
-        foreach ($this->route->app as $route) {
+        foreach (App::route()->app as $route) {
             $route->run($this->web);
         }
 
@@ -165,6 +169,11 @@ class Bootstrap
         $commands[] = BackupCommand::class;
         $commands[] = RestoreCommand::class;
         $commands[] = WebCommand::class;
+        $commands[] = PermissionCommand::class;
+        $commands[] = RouteCommand::class;
+        $commands[] = ListCommand::class;
+        $commands[] = MigrateCommand::class;
+        
         $this->command = Command::init($commands);
 
         // 注册模型迁移

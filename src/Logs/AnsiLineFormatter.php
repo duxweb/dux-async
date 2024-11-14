@@ -2,6 +2,7 @@
 
 namespace Core\Logs;
 
+use Core\App;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -41,9 +42,14 @@ class AnsiLineFormatter extends LineFormatter
 
         $time = $record->datetime->format('Y-m-d H:i:s');
         $levelName = strtoupper(self::LEVEL_MAP[$record->level->name] ?? $record->level->name);
-        
-        $caller = $this->getCallerInfo();
-        $context = $this->formatContext(array_merge($record->context, $record->extra));
+        $context = $record->context;
+
+        $caller = 'unknown:0';
+        if (isset($record->context['file'])) {
+            $caller = $this->getCallerInfo($record->context['file']);
+        }
+
+        $context = $this->formatContext($context);
 
         render(<<<HTML
             <div class="flex">
@@ -59,26 +65,10 @@ class AnsiLineFormatter extends LineFormatter
         return '';
     }
 
-    private function getCallerInfo(): string
-    {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
-        
-        // 从后向前遍历，找到第一个有效的调用
-        for ($i = count($trace) - 1; $i >= 0; $i--) {
-            $t = $trace[$i];
-            
-            // 跳过闭包调用
-            if (isset($t['function']) && str_contains($t['function'], '{closure}')) {
-                continue;
-            }
-            
-            // 如果有文件信息，直接返回
-            if (isset($t['file'])) {
-                return basename(dirname($t['file'])) . '/' . basename($t['file']) . ':' . ($t['line'] ?? 0);
-            }
-        }
 
-        return 'unknown:0';
+    private function getCallerInfo(array $file): string
+    {
+        return basename($file['file']) . ':' . ($file['line'] ?? 0);
     }
 
     private function formatContext(array $context): string
@@ -87,20 +77,91 @@ class AnsiLineFormatter extends LineFormatter
             return '';
         }
 
-        $parts = [];
+        $normalParts = [];
+        $trace = null;
+        $file = null;
+
+        // 处理信息
         foreach ($context as $key => $value) {
+            // 保存 trace 和 file 信息，最后处理
+            if ($key === 'trace') {
+                $trace = $value;
+                continue;
+            }
+            if ($key === 'file') {
+                $file = $value;
+                continue;
+            }
+
             if ($value instanceof \Throwable) {
                 $value = $value->getMessage();
             } elseif (is_array($value) || is_object($value)) {
                 $value = json_encode($value, JSON_UNESCAPED_UNICODE);
             }
-            $parts[] = sprintf(
+            
+            $normalParts[] = sprintf(
                 '<span class="text-gray-500">%s</span>=<span>%s</span>', 
                 $key, 
                 $value
             );
         }
 
-        return '<span class="ml-2">' . implode(' ', $parts) . '</span>';
+        // 组合输出
+        $output = [];
+        
+        // 普通信息添加到第一行
+        if (!empty($normalParts)) {
+            $output[] = '<span class="ml-2">' . implode(' ', $normalParts) . '</span>';
+        }
+        
+        // 如果有堆栈信息，先添加文件信息，再添加堆栈
+        if ($trace) {
+            if ($file) {
+                $output[] = sprintf(
+                    '<div><span class="text-cyan-500">in %s(%d)</span></div>',
+                    $file['file'],
+                    $file['line'] ?? 0
+                );
+            }
+            $output[] = $this->formatTrace($trace);
+        }
+
+        return implode("\n", $output);
+    }
+
+    private function formatTrace(array $trace): string
+    {
+        if (empty($trace)) {
+            return '';
+        }
+
+        $lines = ['<div>'];
+        
+        foreach ($trace as $i => $t) {
+            if (!isset($t['file'])) continue;
+            
+            $file = $t['file'];
+            $line = $t['line'] ?? 0;
+            $class = $t['class'] ?? '';
+            $type = $t['type'] ?? '';
+            $function = $t['function'] ?? '';
+            
+            $lines[] = sprintf(
+                '<div>
+                    <span class="text-gray-500 mr-1">#%d</span>
+                    <span class="text-cyan-500 mr-1">%s(%d):</span>
+                    <span class="text-yellow-500 mr-1">%s%s%s()</span>
+                </div>',
+                $i,
+                $file,
+                $line,
+                $class,
+                $type,
+                $function
+            );
+        }
+        
+        $lines[] = '</div>';
+        return implode("\n", $lines);
     }
 }

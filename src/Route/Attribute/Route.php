@@ -17,9 +17,10 @@ class Route
      */
     public function __construct(
         array|string $methods,
-        string       $pattern,
+        string       $route,
         string       $name = '',
-        string       $app = "")
+        bool         $auth = true,
+    )
     {
     }
 }

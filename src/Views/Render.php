@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Core\View;
+namespace Core\Views;
 
 use Core\App;
 use Latte\Engine;
 
-class View
+class Render
 {
 
     public static function init(string $name): Engine

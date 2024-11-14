@@ -11,17 +11,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MigrateCommand extends Command
 {
-
-    protected static $defaultName = 'db:sync';
-    protected static $defaultDescription = 'Synchronize model data tables and fields';
-
     protected function configure(): void
     {
-        $this->addArgument(
-            'app',
-            InputArgument::OPTIONAL,
-            'please enter the app name'
-        );
+        $this->setName("db:sync")->setDescription('Synchronize model data tables and fields');
+        $this->addArgument('app', InputArgument::OPTIONAL, 'please enter the app name');
     }
 
     public function execute(InputInterface $input, OutputInterface $output): int

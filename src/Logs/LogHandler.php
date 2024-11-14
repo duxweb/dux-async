@@ -8,6 +8,7 @@ use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use Monolog\LogRecord;
 
 class LogHandler {
 
@@ -19,6 +20,14 @@ class LogHandler {
         $logger = new Logger($name);
         $logger->pushHandler($fileHandle);
         $logger->pushHandler($streamHandler);
+        $logger->pushProcessor(function (LogRecord $record) {
+            if (isset($record->context['file'])) {
+                return $record;
+            }
+            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+            $record->context['file'] = $trace[2];
+            return $record;
+        });
         return $logger;
     }
     
