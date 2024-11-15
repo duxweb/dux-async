@@ -1,10 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core;
 
 use Carbon\Carbon;
-use Core\App\Attribute;
 use Core\Command\Command;
 use Core\Database\BackupCommand;
 use Core\Database\ListCommand;
@@ -15,21 +15,16 @@ use Core\Handlers\ErrorHtmlRenderer;
 use Core\Handlers\ErrorJsonRenderer;
 use Core\Handlers\ErrorPlainRenderer;
 use Core\Handlers\ErrorXmlRenderer;
-use Core\Handlers\ExceptionBusiness;
 use Core\Middleware\LangMiddleware;
 use Core\Middleware\RequestMiddleware;
-use Core\Middleware\StaticMiddleware;
 use Core\Permission\PermissionCommand;
-use Core\Resources\Resource;
 use Core\Route\RouteCommand;
 use Core\Utils\Fmt;
 use Core\View\View;
 use Core\Web\WebCommand;
 use DI\DependencyException;
 use DI\NotFoundException;
-use JimTools\JwtAuth\Exceptions\AuthorizationException;
 use Latte\Engine;
-use Middlewares\ContentLanguage;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
 use Symfony\Component\Console\Application;
@@ -173,7 +168,7 @@ class Bootstrap
         $commands[] = RouteCommand::class;
         $commands[] = ListCommand::class;
         $commands[] = MigrateCommand::class;
-        
+
         $this->command = Command::init($commands);
 
         // 注册模型迁移

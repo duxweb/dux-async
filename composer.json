@@ -51,7 +51,8 @@
         "jimtools/jwt-auth": "^2.1",
         "slim/slim": "4.*",
         "willdurand/negotiation": "^3.1",
-        "aws/aws-sdk-php": "^3.326"
+        "aws/aws-sdk-php": "^3.326",
+        "vlucas/valitron": "^1.4"
     },
     "autoload": {
         "psr-4": {

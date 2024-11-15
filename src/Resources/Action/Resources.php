@@ -100,9 +100,7 @@ abstract class Resources
      * @param array $args
      * @return void
      */
-    public function init(ServerRequestInterface $request, ResponseInterface $response, array $args): void
-    {
-    }
+    public function init(ServerRequestInterface $request, ResponseInterface $response, array $args): void {}
 
     /**
      * 数据转换
@@ -121,9 +119,7 @@ abstract class Resources
      * @param Builder $query
      * @return void
      */
-    public function query(Builder $query)
-    {
-    }
+    public function query(Builder $query) {}
 
     /**
      * 多条数据查询
@@ -132,9 +128,7 @@ abstract class Resources
      * @param ServerRequestInterface $request
      * @return void
      */
-    public function queryMany(Builder $query, ServerRequestInterface $request, array $args)
-    {
-    }
+    public function queryMany(Builder $query, ServerRequestInterface $request, array $args) {}
 
     /**
      * 单条数据查询
@@ -143,9 +137,7 @@ abstract class Resources
      * @param array $args
      * @return void
      */
-    public function queryOne(Builder $query, ServerRequestInterface $request, array $args)
-    {
-    }
+    public function queryOne(Builder $query, ServerRequestInterface $request, array $args) {}
 
     /**
      * 多条元数据
@@ -260,5 +252,4 @@ abstract class Resources
         }
         return $array;
     }
-
 }

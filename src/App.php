@@ -117,7 +117,7 @@ class App
 
     public static function lock(?string $type = null): LockFactory
     {
-        $config = self::config("app");
+        $config = self::config("use");
         $type = $type ?? $config->get("lock.type", "memory");
 
         if (!self::$di->has("lock." . $type)) {
@@ -131,7 +131,7 @@ class App
 
     public static function cache(?string $type = null): Psr16Cache
     {
-        $config = self::config("app");
+        $config = self::config("use");
         $type = $type ?? $config->get("cache.type", "memory");
 
         if (!self::$di->has("cache." . $type)) {
@@ -178,7 +178,7 @@ class App
     {
         if (!self::$di->has("worker")) {
             self::$di->set("worker", new Worker(
-                \Core\App::config("app")->get('worker', [
+                \Core\App::config("use")->get('worker', [
                     'nonblocking' => true,
                     'expiry_duration' => 60,
                     'min_workers' => 10,
