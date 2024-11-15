@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Redis;
@@ -37,6 +38,10 @@ class Redis
 
     private function getPool(): \Predis\ClientInterface|\Redis
     {
+        if (ContextManage::context() === null) {
+            throw new \Exception('Context not initialized');
+        }
+
         $redis = ContextManage::context()->getValue('redis');
         if ($redis !== null) {
             return $redis;
@@ -88,5 +93,4 @@ class Redis
         }
         return $client->getClient();
     }
-
 }

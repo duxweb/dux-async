@@ -25,15 +25,16 @@ class Pool
         private readonly int              $idleTime = 60,
         private readonly ?LoggerInterface $logger = null,
         private readonly ?Closure         $close = null,
-    )
-    {
+    ) {
         $this->connections = new WeakMap();
         $this->channel = new Channel($this->maxOpen);
         $this->currentSize = new Atomic(0);
+
+        // 启动健康检查
         $this->startHealthCheck();
 
         // 添加协程退出监听
-        \Swoole\Coroutine::defer(function() {
+        \Swoole\Coroutine::defer(function () {
             $this->close();
         });
     }
@@ -166,8 +167,10 @@ class Pool
                         try {
                             call_user_func($this->close, $conn);
                         } catch (Exception $e) {
-                            $this->logger?->error('Failed to close idle connection',
-                                ['error' => $e->getMessage()]);
+                            $this->logger?->error(
+                                'Failed to close idle connection',
+                                ['error' => $e->getMessage()]
+                            );
                         }
                     }
                     $this->logger?->debug('Closed idle connection', [
@@ -185,7 +188,7 @@ class Pool
         if (!$this->running || !$this->channel && \Swoole\Coroutine::getCid() !== -1) {
             return;
         }
-        
+
         $this->running = false;
 
         try {
@@ -202,8 +205,10 @@ class Pool
                     try {
                         call_user_func($this->close, $conn);
                     } catch (Exception $e) {
-                        $this->logger?->error('Failed to close connection during shutdown',
-                            ['error' => $e->getMessage()]);
+                        $this->logger?->error(
+                            'Failed to close connection during shutdown',
+                            ['error' => $e->getMessage()]
+                        );
                     }
                 }
             }

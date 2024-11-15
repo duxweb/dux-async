@@ -179,11 +179,10 @@ class App
         if (!self::$di->has("worker")) {
             self::$di->set("worker", new Worker(
                 \Core\App::config("app")->get('worker', [
-                'capacity' => 1000,
-                'nonblocking' => false,
-                'max_queue_size' => 100000,
-                'expiry_duration' => 10,
-                'min_workers' => 10,
+                    'nonblocking' => true,
+                    'expiry_duration' => 60,
+                    'min_workers' => 10,
+                    'max_workers' => 10000,
                 ]),
                 logger: App::log('worker', App::$debug ? Level::Debug : Level::Info),
             ));
@@ -204,7 +203,7 @@ class App
         );
         return $event;
     }
-    
+
     public static function attributes(): array
     {
         if (self::$di->has("attributes")) {
@@ -216,7 +215,7 @@ class App
         self::$di->set("attributes", $attributes);
         return $attributes;
     }
-    
+
     public static function permission(): Permission\Register
     {
         if (self::$di->has("permission")) {
@@ -358,5 +357,4 @@ class App
             </div>
         HTML);
     }
-
 }

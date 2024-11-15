@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Lock;
@@ -9,7 +10,8 @@ use Core\Lock\Store\MemoryStore;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\RedisStore;
 
-class Lock {
+class Lock
+{
 
     public static function init(string $type = 'memory'): LockFactory
     {
