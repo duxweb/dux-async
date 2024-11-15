@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Logs;
@@ -10,10 +11,11 @@ use Monolog\Level;
 use Monolog\Logger;
 use Monolog\LogRecord;
 
-class LogHandler {
+class LogHandler
+{
 
-    public static function init(string $name, Level $level): Logger {
-
+    public static function init(string $name, Level $level): Logger
+    {
         $fileHandle = new RotatingFileHandler(App::$dataPath . '/logs/' . $name . '.log', 15, $level, true, 0777);
         $streamHandler = new StreamHandler('php://stdout', $level);
         $streamHandler->setFormatter(new AnsiLineFormatter());
@@ -24,11 +26,10 @@ class LogHandler {
             if (isset($record->context['file'])) {
                 return $record;
             }
-            //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-            //$record->context['file'] = $trace[2];
+            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+            $record->extra['file'] = $trace[2];
             return $record;
         });
         return $logger;
     }
-    
 }

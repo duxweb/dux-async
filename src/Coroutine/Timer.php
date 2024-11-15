@@ -91,6 +91,11 @@ class Timer
         });
     }
 
+    public function stop(): void
+    {
+        $this->channel->close();
+    }
+
     public function clear(): void
     {
         if (!$this->running) {

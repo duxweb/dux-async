@@ -15,7 +15,6 @@ use Slim\Psr7\Factory\UploadedFileFactory;
 use Swoole\Coroutine\Http\Server;
 use Swoole\Runtime;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use function Swoole\Coroutine\run;
@@ -36,7 +35,7 @@ class WebCommand extends Command
 
         run(function () {
 
-            $http = new Server(App::di()->get('host'), App::di()->get('port'), false);
+            $http = new Server(App::$host, App::$port, false);
 
             App::banner();
 
@@ -69,7 +68,6 @@ class WebCommand extends Command
             $http->start();
 
             $http->shutdown();
-
         });
 
         return Command::SUCCESS;
@@ -122,7 +120,7 @@ class WebCommand extends Command
                 $response->status(304);
                 return $response;
             }
-            
+
             $content = file_get_contents($realFile);
             if ($content !== false) {
                 $compressedContent = $encoding === 'gzip' ? gzencode($content, 9) : gzdeflate($content, 9);

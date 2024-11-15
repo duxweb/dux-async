@@ -15,7 +15,6 @@ use Core\Lock\Lock;
 use Core\Logs\LogHandler;
 use Core\Redis\Redis;
 use Core\Translation\TomlFileLoader;
-use Core\Utils\Fmt;
 use Core\Views\Render;
 use DI\Container;
 use Dotenv\Dotenv;
@@ -46,29 +45,32 @@ class App
     public static string $logo = '';
     public static string $lang = '';
     public static string $timezone = '';
-    public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = null, ?int $port = null, ?bool $debug = true, ?string $logo = '')
+    public static ?string $host = null;
+    public static ?int $port = null;
+
+    public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = "0.0.0.0", ?int $port = 8900, ?bool $debug = true, ?string $logo = '')
     {
         self::$logo = $logo;
         self::$lang = $lang;
         self::$debug = $debug;
         self::$timezone = $timezone;
+        self::$host = $host;
+        self::$port = $port;
 
         self::$basePath = $basePath;
         self::$configPath = $basePath . '/config';
         self::$dataPath = $basePath . '/data';
         self::$publicPath = $basePath . '/public';
         self::$appPath = $basePath . '/app';
+        self::init();
+    }
+
+    public static function init()
+    {
         $dotenv = Dotenv::createImmutable(self::$basePath);
         $dotenv->safeLoad();
 
         self::$di = new Container();
-        self::$di->set('lang', $lang);
-        self::$di->set('timezone', $timezone);
-        self::$di->set('port', $port ?? 8900);
-        self::$di->set('host', $host ?? '127.0.0.1');
-        self::$di->set('debug', $debug);
-
-
         self::$bootstrap = new \Core\Bootstrap();
         self::$bootstrap->registerFunc();
         self::$bootstrap->registerConfig();
@@ -312,10 +314,10 @@ class App
     {
         $logo = self::$logo ?: null;
         $version = self::$version;
-        $host = self::$di->get('host');
-        $port = self::$di->get('port');
+        $host = self::$host;
+        $port = self::$port;
         $time = date('Y-m-d H:i:s');
-        $debug = App::$debug ? 'true' : 'false';
+        $debug = self::$debug ? 'true' : 'false';
 
         $swooleVersion = SWOOLE_VERSION;
         $phpVersion = phpversion();

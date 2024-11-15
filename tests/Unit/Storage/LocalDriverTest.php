@@ -15,7 +15,7 @@ beforeEach(function () {
         'path' => 'uploads'
     ];
 
-    $this->driver = new LocalDriver($this->config, function($path) {
+    $this->driver = new LocalDriver($this->config, function ($path) {
         return hash('sha256', $path . 'test_secret');
     });
 });
@@ -38,7 +38,7 @@ afterEach(function () {
 });
 
 // 基础文件操作测试
-test('basic file operations', function () {
+test('basic', function () {
     $path = 'test.txt';
     $content = 'Hello World';
 
@@ -58,7 +58,7 @@ test('basic file operations', function () {
 });
 
 // 流操作测试
-test('stream operations', function () {
+test('stream', function () {
     $path = 'test_stream.txt';
     $content = 'Hello Stream';
 
@@ -77,9 +77,9 @@ test('stream operations', function () {
 });
 
 // URL生成测试
-test('url generation', function () {
+test('url', function () {
     $path = 'test.jpg';
-    
+
     // 测试公共URL
     $publicUrl = $this->driver->publicUrl($path);
     expect($publicUrl)->toBe('https://example.com/uploads/' . $path);
@@ -90,7 +90,7 @@ test('url generation', function () {
 });
 
 // 签名URL测试
-test('signed urls', function () {
+test('sign', function () {
     $path = 'test_signed.txt';
 
     // 测试POST签名URL
@@ -107,7 +107,7 @@ test('signed urls', function () {
 });
 
 // 错误处理测试
-test('error handling', function () {
+test('error', function () {
     $nonExistentPath = 'non_existent.txt';
 
     // 测试读取不存在的文件
@@ -124,10 +124,10 @@ test('error handling', function () {
 });
 
 // 目录创建测试
-test('directory creation', function () {
+test('directory', function () {
     $path = 'nested/directory/test.txt';
     $content = 'Nested Content';
-    
+
     // 确保测试目录存在且有写入权限
     $nestedDir = $this->testDir . '/nested/directory';
     if (!is_dir($nestedDir)) {
@@ -139,18 +139,18 @@ test('directory creation', function () {
 
     // 验证嵌套目录是否正确创建
     expect(is_dir($nestedDir))->toBeTrue();
-    
+
     // 清理
     $this->driver->delete($path);
 });
 
 // 驱动类型测试
-test('driver type', function () {
+test('type', function () {
     expect($this->driver->isLocal())->toBeTrue();
 });
 
 // 配置测试
-test('driver configuration', function () {
+test('config', function () {
     // 测试没有配置的情况
     $driver = new LocalDriver([]);
     expect($driver->publicUrl('test.txt'))->toBe('/test.txt');
@@ -168,7 +168,7 @@ test('driver configuration', function () {
 });
 
 // 签名回调测试
-test('sign callback', function () {
+test('callback', function () {
     $path = 'test.txt';
     $expectedSign = hash('sha256', 'uploads/' . $path . 'test_secret');
 
@@ -177,4 +177,4 @@ test('sign callback', function () {
 
     $putUrl = $this->driver->signPutUrl($path);
     expect($putUrl)->toContain('sign=' . $expectedSign);
-}); 
+});

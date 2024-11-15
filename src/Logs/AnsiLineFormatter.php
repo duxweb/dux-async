@@ -24,7 +24,6 @@ class AnsiLineFormatter extends LineFormatter
     public function __construct()
     {
         parent::__construct(null, null, true);
-
     }
 
     public function format(LogRecord $record): string
@@ -45,8 +44,8 @@ class AnsiLineFormatter extends LineFormatter
         $context = $record->context;
 
         $caller = 'unknown:0';
-        if (isset($record->context['file'])) {
-            $caller = $this->getCallerInfo($record->context['file']);
+        if (isset($record->extra['file'])) {
+            $caller = $this->getCallerInfo($record->extra['file']);
         }
 
         $context = $this->formatContext($context);
@@ -98,22 +97,22 @@ class AnsiLineFormatter extends LineFormatter
             } elseif (is_array($value) || is_object($value)) {
                 $value = json_encode($value, JSON_UNESCAPED_UNICODE);
             }
-            
+
             $normalParts[] = sprintf(
-                '<span class="text-gray-500">%s</span>=<span>%s</span>', 
-                $key, 
+                '<span class="text-gray-500">%s</span>=<span>%s</span>',
+                $key,
                 $value
             );
         }
 
         // 组合输出
         $output = [];
-        
+
         // 普通信息添加到第一行
         if (!empty($normalParts)) {
             $output[] = '<span class="ml-2">' . implode(' ', $normalParts) . '</span>';
         }
-        
+
         // 如果有堆栈信息，先添加文件信息，再添加堆栈
         if ($trace) {
             if ($file) {
@@ -136,16 +135,16 @@ class AnsiLineFormatter extends LineFormatter
         }
 
         $lines = ['<div>'];
-        
+
         foreach ($trace as $i => $t) {
             if (!isset($t['file'])) continue;
-            
+
             $file = $t['file'];
             $line = $t['line'] ?? 0;
             $class = $t['class'] ?? '';
             $type = $t['type'] ?? '';
             $function = $t['function'] ?? '';
-            
+
             $lines[] = sprintf(
                 '<div>
                     <span class="text-gray-500 mr-1">#%d</span>
@@ -160,7 +159,7 @@ class AnsiLineFormatter extends LineFormatter
                 $function
             );
         }
-        
+
         $lines[] = '</div>';
         return implode("\n", $lines);
     }

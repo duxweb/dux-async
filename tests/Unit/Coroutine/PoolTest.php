@@ -15,7 +15,7 @@ class TestConnection
   }
 }
 
-coroutineTest('Basic Pool Operations', function () {
+coroutineTest('basic', function () {
   $wg = new \Swoole\Coroutine\WaitGroup();
   $wg->add(1);
 
@@ -92,7 +92,7 @@ coroutineTest('Basic Pool Operations', function () {
   $wg->wait();
 });
 
-coroutineTest('Pool Maximum Connection Limit', function () {
+coroutineTest('limit', function () {
   $logHandler = new TestHandler();
   $logger = new Logger('test', [$logHandler]);
 
@@ -133,7 +133,7 @@ coroutineTest('Pool Maximum Connection Limit', function () {
   $wg->wait();
 });
 
-coroutineTest('Pool Error Handling', function () {
+coroutineTest('error', function () {
   $logHandler = new TestHandler();
   $logger = new Logger('test', [$logHandler]);
 

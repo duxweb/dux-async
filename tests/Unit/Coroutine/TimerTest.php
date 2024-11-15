@@ -3,7 +3,7 @@
 use Core\Coroutine\Timer;
 use Swoole\Coroutine;
 
-coroutineTest('timer tick works correctly', function () {
+coroutineTest('tick', function () {
   $wg = new Coroutine\WaitGroup();
   $wg->add(1);
 
@@ -33,7 +33,7 @@ coroutineTest('timer tick works correctly', function () {
   $wg->wait();
 });
 
-coroutineTest('timer after works correctly', function () {
+coroutineTest('after', function () {
   $wg = new Coroutine\WaitGroup();
   $wg->add(1);
 
@@ -67,7 +67,7 @@ coroutineTest('timer after works correctly', function () {
   $wg->wait();
 });
 
-coroutineTest('timer clear stops execution', function () {
+coroutineTest('clear', function () {
   $wg = new Coroutine\WaitGroup();
   $wg->add(1);
 
@@ -106,7 +106,7 @@ coroutineTest('timer clear stops execution', function () {
   $wg->wait();
 });
 
-coroutineTest('timer handles invalid intervals', function () {
+coroutineTest('invalid', function () {
   $wg = new Coroutine\WaitGroup();
   $wg->add(1);
 

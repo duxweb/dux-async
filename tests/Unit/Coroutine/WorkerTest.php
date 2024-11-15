@@ -10,7 +10,7 @@ beforeEach(function () {
   }
 });
 
-coroutineTest('initialize with correct configuration', function () {
+coroutineTest('init', function () {
   $worker = new Worker([
     'min_workers' => 5,
     'max_workers' => 10,
@@ -22,7 +22,7 @@ coroutineTest('initialize with correct configuration', function () {
   expect($worker->getRunning())->toBe(5);
 });
 
-coroutineTest('process tasks successfully', function () {
+coroutineTest('process', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 10,
@@ -37,7 +37,7 @@ coroutineTest('process tasks successfully', function () {
   expect($result->pop(1))->toBe('task completed');
 });
 
-coroutineTest('handle multiple tasks concurrently', function () {
+coroutineTest('concurrent', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 10,
@@ -65,7 +65,7 @@ coroutineTest('handle multiple tasks concurrently', function () {
   expect($collected)->toHaveCount(3);
 });
 
-coroutineTest('handle errors with custom error handler', function () {
+coroutineTest('error', function () {
   $errorCaught = false;
 
   $worker = new Worker(
@@ -86,7 +86,7 @@ coroutineTest('handle errors with custom error handler', function () {
   expect($errorCaught)->toBeTrue();
 });
 
-coroutineTest('throw exception in nonblocking mode when pool is full', function () {
+coroutineTest('nonblock', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 5,
@@ -105,7 +105,7 @@ coroutineTest('throw exception in nonblocking mode when pool is full', function 
     ->toThrow(RuntimeException::class);
 });
 
-coroutineTest('block in blocking mode when pool is full', function () {
+coroutineTest('block', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 5,
@@ -134,7 +134,7 @@ coroutineTest('block in blocking mode when pool is full', function () {
   expect(microtime(true) - $startTime)->toBeGreaterThan(0.2);
 });
 
-coroutineTest('handle batch task submission', function () {
+coroutineTest('batch', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 10,
@@ -158,12 +158,12 @@ coroutineTest('handle batch task submission', function () {
     ->and($collected)->toContain(1, 2, 3);
 });
 
-coroutineTest('throw exception for invalid capacity', function () {
+coroutineTest('invalid', function () {
   expect(fn() => new Worker(['min_workers' => 0]))
     ->toThrow(InvalidArgumentException::class);
 });
 
-coroutineTest('clean up resources on shutdown', function () {
+coroutineTest('release', function () {
   $worker = new Worker([
     'min_workers' => 2,
     'max_workers' => 5

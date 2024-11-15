@@ -4,7 +4,7 @@ use Core\Lock\Lock;
 use Swoole\Coroutine;
 use function Swoole\Coroutine\run;
 
-coroutineTest('Lock can correctly prevent concurrent access', function () {
+coroutineTest('concurrent', function () {
   // 创建一个共享计数器
   $counter = 0;
   $lockFactory = Lock::init('memory');
@@ -36,7 +36,7 @@ coroutineTest('Lock can correctly prevent concurrent access', function () {
   expect($counter)->toBe(10);
 });
 
-coroutineTest('Lock timeout mechanism works properly', function () {
+coroutineTest('timeout', function () {
   $lockFactory = Lock::init('memory');
   $lock = $lockFactory->createLock('timeout-lock', 1); // 1秒超时
 
@@ -58,7 +58,7 @@ coroutineTest('Lock timeout mechanism works properly', function () {
   expect($secondAcquired)->toBeFalse();
 });
 
-coroutineTest('Different types of lock storage can be initialized properly', function () {
+coroutineTest('storage', function () {
   $memoryLock = Lock::init('memory');
   expect($memoryLock)->toBeInstanceOf(\Symfony\Component\Lock\LockFactory::class);
 
@@ -66,6 +66,6 @@ coroutineTest('Different types of lock storage can be initialized properly', fun
   expect($redisLock)->toBeInstanceOf(\Symfony\Component\Lock\LockFactory::class);
 });
 
-coroutineTest('Initializing invalid lock type should throw exception', function () {
+coroutineTest('invalid', function () {
   expect(fn() => Lock::init('invalid'))->toThrow(\Core\Handlers\Exception::class);
 });
