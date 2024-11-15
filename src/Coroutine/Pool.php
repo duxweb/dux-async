@@ -3,11 +3,11 @@
 namespace Core\Coroutine;
 
 use Closure;
+use Core\App;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Swoole\Atomic;
 use Swoole\Coroutine\Channel;
-use Swoole\Timer;
 use WeakMap;
 
 class Pool
@@ -31,6 +31,11 @@ class Pool
         $this->channel = new Channel($this->maxOpen);
         $this->currentSize = new Atomic(0);
         $this->startHealthCheck();
+
+        // 添加协程退出监听
+        \Swoole\Coroutine::defer(function() {
+            $this->close();
+        });
     }
 
     public function create(): mixed
@@ -135,7 +140,11 @@ class Pool
 
     private function startHealthCheck(): void
     {
-        Timer::tick(10 * 1000, function () {
+        App::timer()->tick(10 * 1000, function () {
+            $this->logger?->debug('Health check', [
+                'current_size' => $this->currentSize->get(),
+                'idle_count' => count($this->connections)
+            ]);
             try {
                 while ($this->currentSize->get() > $this->maxIdle) {
                     $conn = $this->channel->pop(0.001);
@@ -173,37 +182,36 @@ class Pool
 
     public function close(): void
     {
-        if (!$this->running) {
+        if (!$this->running || !$this->channel && \Swoole\Coroutine::getCid() !== -1) {
             return;
         }
-
+        
         $this->running = false;
-        try {
-            while (!$this->channel->isEmpty()) {
-                $conn = $this->channel->pop(0.001);
-                if ($conn) {
-                    unset($this->connections[$conn]);
-                    $this->currentSize->sub(1);
 
-                    if ($this->close) {
-                        try {
-                            call_user_func($this->close, $conn);
-                        } catch (Exception $e) {
-                            $this->logger?->error('Failed to close connection during shutdown',
-                                ['error' => $e->getMessage()]);
-                        }
+        try {
+            $timeout = 0.001;
+            while (true) {
+                $conn = $this->channel->pop($timeout);
+                if (!$conn) {
+                    break;
+                }
+                unset($this->connections[$conn]);
+                $this->currentSize->sub(1);
+
+                if ($this->close) {
+                    try {
+                        call_user_func($this->close, $conn);
+                    } catch (Exception $e) {
+                        $this->logger?->error('Failed to close connection during shutdown',
+                            ['error' => $e->getMessage()]);
                     }
                 }
             }
         } finally {
-            $this->channel->close();
-        }
-    }
-
-    public function __destruct()
-    {
-        if ($this->running) {
-            $this->close();
+            $this->currentSize->set(0);
+            if ($this->channel) {
+                $this->channel->close();
+            }
         }
     }
 

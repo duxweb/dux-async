@@ -17,7 +17,7 @@ class S3Driver implements StorageInterface
     private bool $ssl;
     private bool $immutable;
 
-    public function __construct(array $config)
+    public function __construct(array $config, ?S3Client $client = null)
     {
         $this->bucket = $config['bucket'];
         $this->domain = $config['domain'] ?? '';
@@ -26,24 +26,19 @@ class S3Driver implements StorageInterface
         $this->ssl = $config['ssl'] ?? true;
         $this->immutable = $config['immutable'] ?? false;
 
-        // 构建S3客户端配置
-        $clientConfig = [
-            'version' => 'latest',
-            'region'  => $this->region,
-            'credentials' => [
-                'key'    => $config['access_key'],
-                'secret' => $config['secret_key'],
-            ],
-        ];
-
-        // 处理endpoint
-        if ($this->endpoint) {
-            $protocol = $this->ssl ? 'https://' : 'http://';
-            $clientConfig['endpoint'] = $protocol . $this->endpoint;
-            $clientConfig['use_path_style_endpoint'] = true;
+        if ($client) {
+            $this->client = $client;
+        } else {
+            $this->client = new S3Client([
+                'version' => 'latest',
+                'region'  => $this->region,
+                'credentials' => [
+                    'key'    => $config['access_key'],
+                    'secret' => $config['secret_key'],
+                ],
+                'use_path_style_endpoint' => true,
+            ]);
         }
-
-        $this->client = new S3Client($clientConfig);
     }
 
     public function write(string $path, string $contents, array $options = []): bool
@@ -116,9 +111,16 @@ class S3Driver implements StorageInterface
     public function exists(string $path): bool
     {
         try {
-            return $this->client->doesObjectExist($this->bucket, $path);
-        } catch (\Exception $e) {
-            return false;
+            $this->client->headObject([
+                'Bucket' => $this->bucket,
+                'Key'    => $path,
+            ]);
+            return true;
+        } catch (\Aws\S3\Exception\S3Exception $e) {
+            if (in_array($e->getAwsErrorCode(), ['NotFound', 'NoSuchKey'])) {
+                return false;
+            }
+            throw new StorageException("Failed to check file existence: {$path}, " . $e->getMessage());
         }
     }
 

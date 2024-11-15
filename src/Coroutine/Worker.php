@@ -2,51 +2,28 @@
 
 namespace Core\Coroutine;
 
+use Core\App;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Swoole\Coroutine;
-use Swoole\Coroutine\Barrier;
 use Swoole\Coroutine\Channel;
 use Throwable;
 
 /**
  * 协程工作池
- * 用于管理和复用协程资源，控制并发数量
  */
 class Worker
 {
-    /**
-     * 工作协程队列
-     * 用于存储可用的工作协程槽位
-     */
-    private Channel $workerQueue;
-
-    /**
-     * 当前正在运行的任务数量
-     */
-    private int $running = 0;
-
-    /**
-     * 工作池是否已关闭
-     */
-    private bool $closed = false;
-
-    /**
-     * 异常处理器
-     * 用于处理任务执行过程中的异常
-     */
-    private ?\Closure $panicHandler = null;
-
-    /**
-     * 等待中的任务数量
-     * 用于控制任务队列大小
-     */
-    private int $waitingTasks = 0;
 
     /**
      * 日志记录器
      */
     private LoggerInterface $logger;
+
+    /**
+     * 异常处理器
+     */
+    private ?\Closure $errorHandler;
 
     /**
      * 获取工作协程的超时时间（秒）
@@ -57,11 +34,10 @@ class Worker
      * 默认配置选项
      */
     private const DEFAULT_OPTIONS = [
-        'capacity' => 1000,            // 工作池最大容量（最大并发协程数）
-        'nonblocking' => false,        // 是否立即返回（true=立即返回，false=等待可用协程）
-        'max_queue_size' => 100000,      // 最大等待任务数
-        'expiry_duration' => 10,        // 空闲协程清理时间(秒)
-        'min_workers' => 10,            // 最小工作协程数
+        'nonblocking' => false,        // 非阻塞模式，忽略并发限制
+        'expiry_duration' => 60,       // 空闲协程清理时间(秒)
+        'min_workers' => 10,           // 最小工作协程数
+        'max_workers' => 1000,         // 最大工作协程数
     ];
 
     /**
@@ -70,341 +46,192 @@ class Worker
     private array $options;
 
     /**
-     * 构造函数
-     *
-     * @param array $options 配置选项
-     *        - capacity: int 工作池最大容量
-     *        - nonblocking: bool 是否为非阻塞模式
-     *        - max_queue_size: int 最大等待任务数
-     *        - expiry_duration: int 空闲协程清理时间(秒)
-     *        - min_workers: int 最小工作协程数
-     * @throws \InvalidArgumentException 当容量小于等于0时抛出
+     * 任务通道
      */
+    private Channel $taskChannel;
+
+    /**
+     * 空闲工作协程通道
+     */
+    private Channel $idleChannel;
+
+    /**
+     * 工作协程数量
+     */
+    private int $running = 0;
+
+    /**
+     * 是否正在运行
+     */
+    private bool $isRunning = false;
+
     public function __construct(
         array            $options = [],
-        ?LoggerInterface $logger = null
-    )
-    {
+        ?\Closure $errorHandler = null, // 异常处理器
+        ?LoggerInterface $logger = null, // 日志记录器
+    ) {
         $this->logger = $logger ?? new NullLogger();
+        $this->errorHandler = $errorHandler;
         $this->logger->debug('Worker pool initializing', [
             'options' => $options
         ]);
 
-        if ($options['capacity'] <= 0) {
-            throw new \InvalidArgumentException('Capacity must be positive');
+        if ($options['min_workers'] <= 0) {
+            throw new \InvalidArgumentException('min_workers must be positive');
         }
 
         $this->options = array_merge(self::DEFAULT_OPTIONS, $options);
-        $this->workerQueue = new Channel($this->options['capacity']);
 
-        // 初始化工作队列
-        for ($i = 0; $i < $this->options['capacity']; $i++) {
-            $this->workerQueue->push(true);
+        // 初始化通道
+        $this->taskChannel = new Channel(0); // 无限容量
+        $this->idleChannel = new Channel($this->options['max_workers']);
+
+        // 启动最小数量的工作协程
+        $this->spawnWorkers($this->options['min_workers']);
+
+        // 添加协程退出监听
+        if (Coroutine::getCid() > 0) {
+            Coroutine::defer(fn() => $this->release());
+        }
+    }
+
+    /**
+     * 提交任务到协程池
+     * @throws RuntimeException 当协程池未运行或在非阻塞模式下池已满时
+     */
+    public function submit(callable $task): void
+    {
+        if (!$this->isRunning) {
+            throw new \RuntimeException('Worker pool is not running');
         }
 
-        // 启动清理器
-        $this->startCleaner();
+        $this->taskChannel->push($task);
+
+        $this->checkAndScale();
+
+        // 检查是否达到最大工作协程数且任务通道已满
+        if (
+            $this->options['nonblocking']
+            && $this->running >= $this->options['max_workers']
+            && $this->taskChannel->length() > 0
+        ) {
+            $this->logger->error('Worker pool is full', [
+                'running' => $this->running,
+                'max_workers' => $this->options['max_workers'],
+                'task_channel_length' => $this->taskChannel->length()
+            ]);
+            throw new \RuntimeException('Worker pool is full');
+        }
     }
 
     /**
      * 批量提交任务
+     * @throws RuntimeException 当协程池未运行或在非阻塞模式下池已满时
      */
-    public function submitBatch(array $tasks, float $timeout = -1): array
+    public function submitBatch(array $tasks): void
     {
-        if ($this->closed) {
-            throw new \RuntimeException('Worker pool is closed');
+        foreach ($tasks as $task) {
+            $this->submit($task);
         }
+    }
 
-        if ($this->waitingTasks >= $this->options['max_queue_size']) {
-            throw new \RuntimeException('Task queue is full');
+    /**
+     * 检查并扩展工作协程数量
+     */
+    private function checkAndScale(): void
+    {
+        // 获取待处理任务数量
+        $pendingTasks = $this->taskChannel->length();
+        $currentWorkers = $this->running;
+
+        // 如果待处理任务数量大于当前工作协程数，且未达到最大限制，则扩容
+        if ($pendingTasks > 0 && $currentWorkers < $this->options['max_workers']) {
+            $newWorkers = min(
+                $pendingTasks,
+                $this->options['max_workers'] - $currentWorkers
+            );
+
+            if ($newWorkers > 0) {
+                $this->spawnWorkers($newWorkers);
+                // 等待新协程创建完成
+                Coroutine::sleep(0.01);
+            }
         }
+    }
 
-        $results = [];
-        $barrier = Barrier::make();
-        $channels = [];
+    /**
+     * 创建工作协程
+     */
+    private function spawnWorkers(int $count): void
+    {
+        $this->isRunning = true;
+        for ($i = 0; $i < $count; $i++) {
+            Coroutine::create(function () {
+                $this->running++;
+                $lastActiveTime = time();
 
-        // 提交所有任务
-        foreach ($tasks as $index => [$task, $args]) {
-            $taskId = uniqid('task_');
+                while ($this->isRunning) {
+                    try {
+                        // 尝试获取任务
+                        $task = $this->taskChannel->pop(self::POP_TIMEOUT);
 
-            $resultChan = new Channel(1);
-            $channels[$index] = $resultChan;
+                        if ($task === false) {
+                            // 检查空闲超时
+                            if (
+                                time() - $lastActiveTime > $this->options['expiry_duration']
+                                && $this->running > $this->options['min_workers']
+                            ) {
+                                break;
+                            }
+                            continue;
+                        }
 
-            Coroutine::create(function () use ($task, $args, $resultChan, &$results, $index, $barrier, $taskId) {
-                try {
-                    $this->executeTask($taskId, $task, $args, $resultChan);
-                    $results[$index] = $resultChan->pop();
-                } finally {
-                    Barrier::wait($barrier);
-                }
-            });
-        }
+                        $lastActiveTime = time();
 
-        // 设置整体超时
-        if ($timeout > 0) {
-            Coroutine::create(function () use ($barrier, $timeout, $channels) {
-                if (Coroutine::sleep($timeout)) {
-                    return;
-                }
-                foreach ($channels as $chan) {
-                    if ($chan->isEmpty()) {
-                        $chan->push([
-                            'success' => false,
-                            'error' => new \RuntimeException('Batch timeout')
+                        // 执行任务
+                        try {
+                            $task();
+                        } catch (Throwable $e) {
+                            if ($this->errorHandler) {
+                                ($this->errorHandler)($e);
+                            } else {
+                                $this->logger->error('Task execution failed', [
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString()
+                                ]);
+                            }
+                        }
+                    } catch (Throwable $e) {
+                        $this->logger->error('Worker error', [
+                            'error' => $e->getMessage()
                         ]);
                     }
                 }
-                Barrier::wait($barrier);
+
+                $this->running--;
             });
         }
-
-        Barrier::wait($barrier);
-        return $results;
     }
 
     /**
-     * 提交单个任务
+     * 释放资源
      */
-    public function submit(callable $task, float $timeout = 0): mixed
+    private function release(): void
     {
-        $taskId = uniqid('task_');
-        
-        $channel = new Channel(1);
-
-        $this->executeTask($taskId, $task, [], $channel, $timeout);
-        $result = $channel->pop();
-
-        return $result['success'] ? $result['result'] : null;
+        $this->isRunning = false;
+        $this->taskChannel->close();
+        $this->idleChannel->close();
     }
 
-
-    /**
-     * 执行任务的核心方法
-     */
-    private function runTask(callable $task, array $args): array
-    {
-        try {
-            // 获取工作协程槽位
-            if ($this->options['nonblocking'] && $this->workerQueue->isEmpty()) {
-                throw new \RuntimeException('Pool overload');
-            }
-
-            $worker = $this->workerQueue->pop(self::POP_TIMEOUT);
-            if ($worker === false) {
-                return [
-                    'success' => false,
-                    'error' => new \RuntimeException('No available worker')
-                ];
-            }
-
-            $this->running++;
-            try {
-                $result = $task(...$args);
-                return [
-                    'success' => true,
-                    'data' => $result
-                ];
-            } catch (Throwable $e) {
-                if ($this->panicHandler) {
-                    ($this->panicHandler)($e);
-                }
-                return [
-                    'success' => false,
-                    'error' => $e
-                ];
-            } finally {
-                $this->running--;
-                $this->workerQueue->push(true);
-            }
-        } catch (Throwable $e) {
-            return [
-                'success' => false,
-                'error' => $e
-            ];
-        }
-    }
-
-    /**
-     * 执行具体任务（包含超时控制和日志记录）
-     */
-    private function executeTask(string $taskId, callable $task, array $args, Channel $resultChan, float $timeout = 0): void
-    {
-        $this->logger->debug('Executing task', [
-            'task_id' => $taskId,
-            'running_tasks' => $this->running
-        ]);
-
-        $cid = Coroutine::create(function () use ($task, $args, $resultChan, $taskId, $timeout) {
-            $timer = null;
-
-            try {
-                // 设置超时定时器
-                if ($timeout > 0) {
-                    $timer = \Swoole\Timer::after($timeout * 1000, function () use ($resultChan, $taskId) {
-                        $this->logger->warning('Task timeout', ['task_id' => $taskId]);
-                        if ($resultChan->isEmpty()) {
-                            $resultChan->push([
-                                'success' => false,
-                                'error' => new \RuntimeException('Task timeout')
-                            ]);
-                        }
-                    });
-                }
-
-                // 执行任务
-                $result = $this->runTask($task, $args);
-
-                // 清除超时定时器
-                if ($timer) {
-                    \Swoole\Timer::clear($timer);
-                }
-
-                if ($resultChan->isEmpty()) {
-                    $resultChan->push($result);
-                }
-            } finally {
-                $this->logger->debug('Task completed', [
-                    'task_id' => $taskId,
-                    'running_tasks' => $this->running
-                ]);
-                $resultChan->close();
-            }
-        });
-
-        if ($cid === false) {
-            $this->logger->error('Failed to create coroutine for task', [
-                'task_id' => $taskId
-            ]);
-            $resultChan->push([
-                'success' => false,
-                'error' => new \RuntimeException('Failed to create coroutine')
-            ]);
-            $resultChan->close();
-        }
-    }
-
-    /**
-     * 启动空闲协程清理器
-     * 定期清理超过最小值的空闲协程
-     */
-    private function startCleaner(): void
-    {
-        if ($this->options['expiry_duration'] <= 0) {
-            return;
-        }
-
-        Coroutine::create(function () {
-            while (!$this->closed) {
-                Coroutine::sleep($this->options['expiry_duration']);
-                $this->cleanIdleWorkers();
-            }
-        });
-    }
-
-    /**
-     * 清理空闲的工作协程
-     * 保持最小工作协程数，清理多余的空闲协程
-     */
-    private function cleanIdleWorkers(): void
-    {
-        if ($this->closed) {
-            return;
-        }
-
-        $minWorkers = max(
-            $this->options['min_workers'],
-            $this->running
-        );
-
-        $currentFree = $this->workerQueue->length();
-        if ($currentFree > $minWorkers) {
-            $toClean = min(
-                $currentFree - $minWorkers,
-                $currentFree - $this->running
-            );
-
-            for ($i = 0; $i < $toClean; $i++) {
-                $this->workerQueue->pop(0.001);
-            }
-
-            // 重新补充到最小值
-            $currentSize = $this->workerQueue->length();
-            $needAdd = $minWorkers - $currentSize;
-            for ($i = 0; $i < $needAdd; $i++) {
-                $this->workerQueue->push(true);
-            }
-        }
-    }
-
-    /**
-     * 等待所有任务完成
-     *
-     * @param float $timeout 超时时间(秒)，-1表示永不超时
-     * @return bool 是否所有任务都已完成
-     */
-    public function wait(float $timeout = -1): bool
-    {
-        if ($this->running <= 0) {
-            return true;
-        }
-
-        $startTime = microtime(true);
-        while ($this->running > 0) {
-            if ($timeout > 0 && (microtime(true) - $startTime) > $timeout) {
-                return false;
-            }
-            Coroutine::sleep(0.01);
-        }
-        return true;
-    }
-
-    /**
-     * 释放工作池资源
-     * 关闭工作池并等待所有任务完成
-     *
-     * @param float $timeout 等待超时时间(秒)
-     * @return bool 是否成功释放所有资源
-     */
-    public function release(float $timeout = 5.0): bool
-    {
-        $this->closed = true;
-        $result = $this->wait($timeout);
-
-        while (!$this->workerQueue->isEmpty()) {
-            $this->workerQueue->pop(0.001);
-        }
-        $this->workerQueue->close();
-
-        return $result;
-    }
-
-    /**
-     * 设置异常处理器
-     *
-     * @param callable $handler 异常处理函数
-     */
-    public function setPanicHandler(callable $handler): void
-    {
-        $this->panicHandler = $handler;
-    }
-
-    /**
-     * 获取当前正在运行的任务数
-     *
-     * @return int 运行中的任务数
-     */
-    public function running(): int
+    public function getRunning(): int
     {
         return $this->running;
     }
 
-    /**
-     * 检查工作池是否已关闭
-     *
-     * @return bool 是否已关闭
-     */
-    public function isClosed(): bool
+    public function __destruct()
     {
-        return $this->closed;
+        if ($this->isRunning && !Coroutine::getCid()) {
+            $this->release();
+        }
     }
 }

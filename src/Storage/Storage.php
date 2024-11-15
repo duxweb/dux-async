@@ -21,6 +21,11 @@ class Storage
         };
     }
 
+    public function getInstance(): StorageInterface
+    {
+        return $this->driver;
+    }
+
     public function __call(string $name, array $arguments)
     {
         if (method_exists($this->driver, $name)) {

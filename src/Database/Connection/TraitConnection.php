@@ -97,11 +97,4 @@ trait TraitConnection
         return $this->getPool();
     }
 
-    public function disconnect() 
-    {
-        print_r("disconnect\n");
-        
-        parent::disconnect();
-    }
-
 }

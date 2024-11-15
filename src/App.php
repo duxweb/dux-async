@@ -7,6 +7,7 @@ namespace Core;
 use Core\App\Attribute;
 use Core\Cache\Cache;
 use Core\Config\TomlLoader;
+use Core\Coroutine\Timer;
 use Core\Coroutine\Worker;
 use Core\Database\Migrate;
 use Core\Event\Event;
@@ -145,7 +146,6 @@ class App
     public static function redis(string $name = "default", int $database = 0): \Predis\ClientInterface|\Redis
     {
         if (!self::$di->has("redis." . $name)) {
-            Fmt::Println('Init Redis', $name);
             $config = self::config("database")->get("redis.drivers." . $name);
             $redis = new Redis($config);
             self::$di->set(
@@ -167,6 +167,11 @@ class App
             );
         }
         return self::$di->get("view." . $name);
+    }
+
+    public static function timer(): Timer
+    {
+        return new Timer();
     }
 
     public static function worker(): Worker

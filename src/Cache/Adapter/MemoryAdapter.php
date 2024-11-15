@@ -145,7 +145,6 @@ class MemoryAdapter implements AdapterInterface, CacheInterface, LoggerAwareInte
             $expiry = PHP_INT_MAX;
         }
 
-        dump($expiry);
 
         return $this->table->set($key, [
             'value' => serialize($value),

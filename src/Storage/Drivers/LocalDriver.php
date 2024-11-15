@@ -5,6 +5,7 @@ namespace Core\Storage\Drivers;
 
 use Core\Storage\Contracts\StorageInterface;
 use Core\Storage\Exceptions\StorageException;
+use Nette\Utils\FileSystem;
 
 class LocalDriver implements StorageInterface
 {
@@ -15,8 +16,8 @@ class LocalDriver implements StorageInterface
 
     public function __construct(array $config, ?callable $signCallback = null)
     {
-        $this->root = rtrim($config['root'], '/');
-        $this->domain = rtrim($config['domain'], '/');
+        $this->root = $config['root'] ?? '';
+        $this->domain = $config['domain'] ?? '';
         $this->path = $config['path'] ?? '';
         $this->signCallback = $signCallback;
     }
@@ -24,18 +25,12 @@ class LocalDriver implements StorageInterface
     public function write(string $path, string $contents, array $options = []): bool
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
-        $dir = dirname($fullPath);
         
-        if (!is_dir($dir)) {
-            if (!mkdir($dir, 0777, true)) {
-                throw new StorageException("Failed to create directory: {$dir}");
-            }
-        }
-        
-        if (file_put_contents($fullPath, $contents) === false) {
+        try {
+            FileSystem::write($fullPath, $contents);
+        } catch (\Throwable $e) {
             throw new StorageException("Failed to write file: {$path}");
         }
-        
         return true;
     }
 
@@ -87,9 +82,22 @@ class LocalDriver implements StorageInterface
             throw new StorageException("File not readable or not found: {$path}");
         }
         
-        $stream = fopen($fullPath, 'rb');
+        try {
+          $stream = fopen($fullPath, 'rb');
+        } catch (\RuntimeException $e) {
+            throw new StorageException("Failed to open stream: {$path}");
+        }
+
         if ($stream === false) {
             throw new StorageException("Failed to open stream: {$path}");
+        }
+        
+        if (function_exists('Swoole\Coroutine::getCid') && \Swoole\Coroutine::getCid() !== -1) {
+            \Swoole\Coroutine::defer(function() use ($stream) {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            });
         }
         return $stream;
     }

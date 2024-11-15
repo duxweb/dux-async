@@ -24,8 +24,8 @@ class LogHandler {
             if (isset($record->context['file'])) {
                 return $record;
             }
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-            $record->context['file'] = $trace[2];
+            //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+            //$record->context['file'] = $trace[2];
             return $record;
         });
         return $logger;

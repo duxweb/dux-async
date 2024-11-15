@@ -63,7 +63,8 @@
     "require-dev": {
         "swoole/ide-helper": "^5.1",
         "pestphp/pest": "^3.5",
-        "pestphp/pest-plugin-stressless": "^3.0"
+        "pestphp/pest-plugin-stressless": "^3.0",
+        "mockery/mockery": "^1.6"
     },
     "config": {
         "allow-plugins": {
