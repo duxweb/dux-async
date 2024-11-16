@@ -1,8 +1,11 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Core\Handlers;
 
 use Core\App;
+use LogicException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Exception\HttpException;
@@ -60,6 +63,7 @@ class ErrorHandler extends slimErrorHandler
         if (
             $this->statusCode == 404 ||
             $this->exception instanceof HttpSpecializedException ||
+            $this->exception instanceof LogicException ||
             $this->exception instanceof Exception
         ) {
             return;

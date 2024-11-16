@@ -54,7 +54,8 @@
         "willdurand/negotiation": "^3.1",
         "aws/aws-sdk-php": "^3.326",
         "vlucas/valitron": "^1.4",
-        "kalnoy/nestedset": "^6.0"
+        "kalnoy/nestedset": "^6.0",
+        "zoujingli/ip2region": "^2.0"
     },
     "autoload": {
         "psr-4": {

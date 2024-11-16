@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Handlers;
@@ -6,10 +7,11 @@ namespace Core\Handlers;
 /**
  * ExceptionBusiness
  */
-class ExceptionNotFound  extends Exception {
+class ExceptionNotFound  extends Exception
+{
 
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct("Not Found", 404);
     }
-
 }

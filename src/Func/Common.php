@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use Carbon\Carbon;
@@ -8,7 +9,7 @@ use Core\Handlers\ExceptionBusiness;
 use Symfony\Component\VarDumper\VarDumper;
 
 if (!function_exists('dd')) {
-    
+
     function dd(...$vars): void
     {
         foreach ($vars as $v) {
@@ -181,7 +182,6 @@ if (!function_exists('human_filesize')) {
         $factor = floor((strlen((string)$bytes) - 1) / 3);
         return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
     }
-
 }
 
 if (!function_exists('str_hidden')) {

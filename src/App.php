@@ -26,6 +26,8 @@ use Noodlehaus\Config;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Translation\Translator;
+use XdbSearcher;
+
 use function Termwind\render;
 
 class App
@@ -308,6 +310,25 @@ class App
         $config = new Config($file, new TomlLoader(), $string);
         self::$di->set("config." . $name, $config);
         return $config;
+    }
+
+    public static function geo(): XdbSearcher|null
+    {
+        if (!self::$di->has("geo")) {
+            $db = self::config("geo")->get("db");
+
+            if (is_file($db)) {
+                $cBuff = XdbSearcher::loadContentFromFile($db);
+                $ip2region = XdbSearcher::newWithBuffer($cBuff);
+            } else {
+                $ip2region = null;
+            }
+            self::$di->set(
+                "geo",
+                $ip2region
+            );
+        }
+        return self::$di->get("geo");
     }
 
     public static function banner()
