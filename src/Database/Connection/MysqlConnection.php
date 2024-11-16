@@ -12,5 +12,4 @@ class MysqlConnection extends MysqlConnectionBase
     {
         parent::__construct(...$this->initialize($connector, $config));
     }
-
 }

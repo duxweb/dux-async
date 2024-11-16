@@ -34,10 +34,22 @@ class WebCommand extends Command
         ContextManage::init();
 
         run(function () {
+            $host = App::$host;
+            $port = App::$port;
 
-            $http = new Server(App::$host, App::$port, false);
+            $data = [
+                'Version' => App::$version,
+                'PHP' => phpversion(),
+                'Swoole' => SWOOLE_VERSION,
+                'Debug' => App::$debug ? 'true' : 'false',
+                'PID' => getmypid(),
+            ];
+            $extra = [
+                'Web server' => "http://{$host}:{$port}",
+            ];
+            App::banner($data, $extra);
 
-            App::banner();
+            $http = new Server($host, $port, false);
 
             $http->set([
                 'debug_mode' => true,

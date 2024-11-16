@@ -13,6 +13,7 @@ use Core\Database\Migrate;
 use Core\Event\Event;
 use Core\Lock\Lock;
 use Core\Logs\LogHandler;
+use Core\Queue\Queue;
 use Core\Redis\Redis;
 use Core\Translation\TomlFileLoader;
 use Core\Views\Render;
@@ -312,6 +313,25 @@ class App
         return $config;
     }
 
+    public static function queue(): Queue
+    {
+        if (!self::$di->has("queue")) {
+            $config = self::config("queue");
+            $queue = new Queue($config->get("driver", "sqlite"), $config->get("params", []), App::log('queue', App::$debug ? Level::Debug : Level::Info));
+
+            $workers = $config->get('workers', []);
+            foreach ($workers as $worker) {
+                $queue->worker($worker);
+            }
+
+            self::$di->set(
+                "queue",
+                $queue
+            );
+        }
+        return self::$di->get("queue");
+    }
+
     public static function geo(): XdbSearcher|null
     {
         if (!self::$di->has("geo")) {
@@ -331,18 +351,10 @@ class App
         return self::$di->get("geo");
     }
 
-    public static function banner()
+    public static function banner(array $data = [], array $extra = [])
     {
         $logo = self::$logo ?: null;
-        $version = self::$version;
-        $host = self::$host;
-        $port = self::$port;
         $time = date('Y-m-d H:i:s');
-        $debug = self::$debug ? 'true' : 'false';
-
-        $swooleVersion = SWOOLE_VERSION;
-        $phpVersion = phpversion();
-        $pid = getmypid();
 
 
         $banner = $logo ? <<<HTML
@@ -351,32 +363,38 @@ class App
         </div>
         HTML : null;
 
+        $dataHtml = '';
+        foreach ($data as $key => $value) {
+            $dataHtml .= <<<HTML
+            <span class="mr-1">{$key}</span>
+            <span class="text-green mr-2">{$value}</span>
+            HTML;
+        }
+
+        $footerHtml = '';
+        foreach ($extra as $key => $value) {
+            $footerHtml .= <<<HTML
+            <div>
+                <span class="mr-1">⇨ </span>
+                <span>{$key}</span>
+                <span class="text-cyan ml-1">{$value}</span>
+            </div>
+            HTML;
+        }
+
         render(<<<HTML
             <div class="">
                 {$banner}
                 <div class="flex">
                     <span class="mr-1">⇨ </span>
-                    <span class="mr-1">Version</span>
-                    <span class="text-green mr-2">{$version}</span>
-                    <span class="mr-1">PHP</span>
-                    <span class="text-green mr-2">{$phpVersion}</span>
-                    <span class="mr-1">Swoole</span>
-                    <span class="text-green mr-2">{$swooleVersion}</span>
-                    <span class="mr-1">Debug</span>
-                    <span class="text-green mr-2">{$debug}</span>
-                    <span class="mr-1">PID</span>
-                    <span class="text-green mr-2">{$pid}</span>
+                    {$dataHtml}
                 </div>
                 <div>
                     <span class="mr-1">⇨ </span>
                     <span>Start time</span>
                     <span class="text-cyan ml-1">{$time}</span>
                 </div>
-                <div>
-                    <span class="mr-1">⇨ </span>
-                    <span>Web server</span>
-                    <span class="text-cyan ml-1">http://{$host}:{$port}</span>
-                </div>
+                {$footerHtml}
             </div>
         HTML);
     }

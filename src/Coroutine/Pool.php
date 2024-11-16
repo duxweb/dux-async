@@ -35,9 +35,14 @@ class Pool
         $this->startHealthCheck();
 
         // 添加协程退出监听
-        \Swoole\Coroutine::defer(function () {
-            $this->close();
-        });
+        $cid = \Swoole\Coroutine::getCid();
+        if ($cid !== -1) {
+            \Swoole\Coroutine::defer(function () use ($cid) {
+                if (\Swoole\Coroutine::getCid() === $cid) {
+                    $this->close();
+                }
+            });
+        }
     }
 
     public function create(): mixed
@@ -186,6 +191,7 @@ class Pool
 
     public function close(): void
     {
+        dump('xxxx');
         if (!$this->running || !$this->channel && \Swoole\Coroutine::getCid() !== -1) {
             return;
         }
@@ -240,5 +246,10 @@ class Pool
             'channel_length' => $this->channel->length(),
             'is_running' => $this->running,
         ];
+    }
+
+    public function __destruct()
+    {
+        $this->close();
     }
 }

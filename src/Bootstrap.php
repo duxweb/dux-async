@@ -18,6 +18,7 @@ use Core\Handlers\ErrorXmlRenderer;
 use Core\Middleware\LangMiddleware;
 use Core\Middleware\RequestMiddleware;
 use Core\Permission\PermissionCommand;
+use Core\Queue\QueueCommand;
 use Core\Route\RouteCommand;
 use Core\Utils\Fmt;
 use Core\View\View;
@@ -168,6 +169,7 @@ class Bootstrap
         $commands[] = RouteCommand::class;
         $commands[] = ListCommand::class;
         $commands[] = MigrateCommand::class;
+        $commands[] = QueueCommand::class;
 
         $this->command = Command::init($commands);
 

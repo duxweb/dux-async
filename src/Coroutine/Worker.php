@@ -2,7 +2,6 @@
 
 namespace Core\Coroutine;
 
-use Core\App;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Swoole\Coroutine;
@@ -88,11 +87,6 @@ class Worker
 
         // 启动最小数量的工作协程
         $this->spawnWorkers($this->options['min_workers']);
-
-        // 添加协程退出监听
-        if (Coroutine::getCid() > 0) {
-            Coroutine::defer(fn() => $this->release());
-        }
     }
 
     /**
@@ -216,7 +210,7 @@ class Worker
     /**
      * 释放资源
      */
-    private function release(): void
+    public function close(): void
     {
         $this->isRunning = false;
         $this->taskChannel->close();
@@ -230,8 +224,8 @@ class Worker
 
     public function __destruct()
     {
-        if ($this->isRunning && !Coroutine::getCid()) {
-            $this->release();
+        if ($this->isRunning) {
+            $this->close();
         }
     }
 }

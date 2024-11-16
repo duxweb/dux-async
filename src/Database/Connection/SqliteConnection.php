@@ -15,5 +15,4 @@ class SqliteConnection extends SqliteConnectionBase
         }
         parent::__construct(...$this->initialize($connector, $config));
     }
-
 }

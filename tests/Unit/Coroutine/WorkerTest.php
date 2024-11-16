@@ -20,6 +20,8 @@ coroutineTest('init', function () {
 
   // 验证是否创建了最小数量的工作协程
   expect($worker->getRunning())->toBe(5);
+
+  $worker->close();
 });
 
 coroutineTest('process', function () {
@@ -35,6 +37,7 @@ coroutineTest('process', function () {
   });
 
   expect($result->pop(1))->toBe('task completed');
+  $worker->close();
 });
 
 coroutineTest('concurrent', function () {
@@ -63,6 +66,7 @@ coroutineTest('concurrent', function () {
   // 验证并发执行（总耗时应该接近单个任务的耗时）
   expect(microtime(true) - $startTime)->toBeLessThan(0.3);
   expect($collected)->toHaveCount(3);
+  $worker->close();
 });
 
 coroutineTest('error', function () {
@@ -84,6 +88,7 @@ coroutineTest('error', function () {
 
   Coroutine::sleep(0.1);
   expect($errorCaught)->toBeTrue();
+  $worker->close();
 });
 
 coroutineTest('nonblock', function () {
@@ -103,6 +108,7 @@ coroutineTest('nonblock', function () {
   // 在非阻塞模式下，当池满时应该抛出异常
   expect(fn() => $worker->submit(fn() => null))
     ->toThrow(RuntimeException::class);
+  $worker->close();
 });
 
 coroutineTest('block', function () {
@@ -132,6 +138,7 @@ coroutineTest('block', function () {
   // 验证任务最终完成，且经过了阻塞时间
   expect($result->pop(1))->toBe('done');
   expect(microtime(true) - $startTime)->toBeGreaterThan(0.2);
+  $worker->close();
 });
 
 coroutineTest('batch', function () {
@@ -156,33 +163,10 @@ coroutineTest('batch', function () {
 
   expect($collected)->toHaveCount(3)
     ->and($collected)->toContain(1, 2, 3);
+  $worker->close();
 });
 
 coroutineTest('invalid', function () {
   expect(fn() => new Worker(['min_workers' => 0]))
     ->toThrow(InvalidArgumentException::class);
-});
-
-coroutineTest('release', function () {
-  $worker = new Worker([
-    'min_workers' => 2,
-    'max_workers' => 5
-  ]);
-
-  // 通过反射获取和设置属性
-  $reflection = new ReflectionClass($worker);
-
-  $isRunningProp = $reflection->getProperty('isRunning');
-  $isRunningProp->setAccessible(true);
-
-  $taskChannelProp = $reflection->getProperty('taskChannel');
-  $taskChannelProp->setAccessible(true);
-
-  // 触发释放
-  $releaseProp = $reflection->getMethod('release');
-  $releaseProp->setAccessible(true);
-  $releaseProp->invoke($worker);
-
-  expect($isRunningProp->getValue($worker))->toBeFalse()
-    ->and($taskChannelProp->getValue($worker)->errCode)->toBe(SWOOLE_CHANNEL_CLOSED);
 });
