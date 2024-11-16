@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Database;
@@ -51,7 +52,6 @@ class Migrate
             $name = $seed::class;
             $output?->writeln("sync send <info>$name</info> {$time}s");
         }
-
     }
 
     private function migrateTable(Connection $connect, Model $model, &$seed): void
@@ -62,6 +62,9 @@ class Migrate
         $tableExists = App::db()->getConnection()->getSchemaBuilder()->hasTable($modelTable);
         App::db()->getConnection()->getSchemaBuilder()->dropIfExists($tempTable);
         App::db()->getConnection()->getSchemaBuilder()->create($tableExists ? $tempTable : $modelTable, function (Blueprint $table) use ($model) {
+            if ($model->getTableComment()) {
+                $table->comment($model->getTableComment());
+            }
             $model->migration($table);
             $model->migrationGlobal($table);
         });
@@ -103,5 +106,4 @@ class Migrate
             }
         }
     }
-
 }
