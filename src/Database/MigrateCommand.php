@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Database;
@@ -8,6 +9,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use function Swoole\Coroutine\run;
 
 class MigrateCommand extends Command
 {
@@ -20,9 +23,10 @@ class MigrateCommand extends Command
     public function execute(InputInterface $input, OutputInterface $output): int
     {
         $app = $input->getArgument('app') ?: '';
-        App::dbMigrate()->migrate($output, $app);
-        $output->writeln("<info>Sync database successfully</info>");
+        run(function () use ($output, $app) {
+            App::dbMigrate()->migrate($output, $app);
+            $output->writeln("<info>Sync database successfully</info>");
+        });
         return Command::SUCCESS;
     }
-
 }

@@ -16,6 +16,7 @@ class Pool
     private Channel $channel;
     private Atomic $currentSize;
     private bool $running = true;
+    private ?Timer $timer = null;
 
     public function __construct(
         private readonly Closure          $callback,
@@ -141,7 +142,7 @@ class Pool
 
     private function startHealthCheck(): void
     {
-        App::timer()->tick(10 * 1000, function () {
+        $this->timer = App::timer()->tick(10 * 1000, function () {
             $this->logger?->debug('Health check', [
                 'current_size' => $this->currentSize->get(),
                 'idle_count' => count($this->connections)
@@ -192,6 +193,12 @@ class Pool
         $this->running = false;
 
         try {
+
+            if ($this->timer) {
+                $this->timer->clear();
+                $this->timer = null;
+            }
+
             $timeout = 0.001;
             while (true) {
                 $conn = $this->channel->pop($timeout);

@@ -59,7 +59,6 @@
     "autoload": {
         "psr-4": {
             "Core\\": "src/",
-            "App\\": "example/app/",
             "Core\\Tests\\": "tests"
         }
     },

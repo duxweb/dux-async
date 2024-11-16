@@ -6,6 +6,7 @@ namespace Core\Database;
 
 use Core\App;
 use Core\Database\Attribute\AutoMigrate;
+use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Comparator;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
@@ -75,28 +76,34 @@ class Migrate
             return;
         }
         // 更新表字段
-        $manager = $model->getConnection()->getDoctrineSchemaManager();
-        $modelTableDetails = $manager->introspectTable($pre . $modelTable);
-        $tempTableDetails = $manager->introspectTable($pre . $tempTable);
-        foreach ($tempTableDetails->getIndexes() as $indexName => $indexInfo) {
-            $correctIndexName = str_replace('table_', '', $indexName);
-            $tempTableDetails->renameIndex($indexName, $correctIndexName);
-        }
-        $platform = $manager->getDatabasePlatform();
-        $comparator = new Comparator($platform);
-        $diff = $comparator->compareTables($modelTableDetails, $tempTableDetails);
-        if ($diff) {
-            $manager->alterTable($diff);
+        $connection = $this->getDoctrineConnection($model->getConnection());;
+        $schemaManager = $connection->createSchemaManager();
+        $tableDiff = $schemaManager->createComparator()->compareTables(
+            $schemaManager->introspectTable($pre . $modelTable),
+            $schemaManager->introspectTable($pre . $tempTable)
+        );
+        if (!$tableDiff->isEmpty()) {
+            $schemaManager->alterTable($tableDiff);
         }
         App::db()->getConnection()->getSchemaBuilder()->drop($tempTable);
     }
 
+    public function getDoctrineConnection(Connection $modelConnection): \Doctrine\DBAL\Connection
+    {
+        $connectionSettings = $modelConnection->getConfig();
+        return DriverManager::getConnection([
+            'dbname' => $connectionSettings['database'],
+            'user' => $connectionSettings['username'],
+            'password' => $connectionSettings['password'],
+            'host' => $connectionSettings['host'],
+            'driver' => 'pdo_' . $connectionSettings['driver'],
+        ]);
+    }
 
     // 注册迁移模型
     public function registerAttribute(): void
     {
         $attributes = App::attributes();
-
         foreach ($attributes as $item) {
             foreach ($item["annotations"] as $annotation) {
                 if ($annotation["name"] != AutoMigrate::class) {

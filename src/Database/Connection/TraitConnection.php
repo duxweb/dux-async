@@ -37,8 +37,7 @@ trait TraitConnection
             logger: App::log('database_pool', App::$debug ? Level::Debug : Level::Info),
         );
 
-        return [function () {
-        }, $config['database'], $config['prefix'], $config];
+        return [function () {}, $config['database'], $config['prefix'], $config];
     }
 
     // 获取连接
@@ -96,5 +95,4 @@ trait TraitConnection
     {
         return $this->getPool();
     }
-
 }

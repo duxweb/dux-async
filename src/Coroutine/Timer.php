@@ -21,7 +21,7 @@ class Timer
         $this->parentId = Coroutine::getPcid();
     }
 
-    public function tick(int $milliseconds, callable $callback): void
+    public function tick(int $milliseconds, callable $callback): self
     {
         if ($milliseconds < 1) {
             throw new \InvalidArgumentException('Timer interval must be greater than 0');
@@ -30,10 +30,7 @@ class Timer
         Coroutine::create(function () use ($milliseconds, $callback) {
             try {
                 if ($this->parentId) {
-                    Coroutine::create(function () {
-                        Coroutine::join([$this->parentId]);
-                        $this->clear();
-                    });
+                    Coroutine::defer(fn() => $this->clear());
                 }
 
                 if ($this->channel->push(1, $milliseconds / 1000) === false) {
@@ -58,9 +55,11 @@ class Timer
                 throw $e;
             }
         });
+
+        return $this;
     }
 
-    public function after(int $milliseconds, callable $callback): void
+    public function after(int $milliseconds, callable $callback): self
     {
         if ($milliseconds < 1) {
             throw new \InvalidArgumentException('Timer interval must be greater than 0');
@@ -69,10 +68,7 @@ class Timer
         Coroutine::create(function () use ($milliseconds, $callback) {
             try {
                 if ($this->parentId) {
-                    Coroutine::create(function () {
-                        Coroutine::join([$this->parentId]);
-                        $this->clear();
-                    });
+                    Coroutine::defer(fn() => $this->clear());
                 }
 
                 // 使用 Channel 等待指定时间
@@ -89,6 +85,8 @@ class Timer
                 $this->clear();
             }
         });
+
+        return $this;
     }
 
     public function stop(): void
