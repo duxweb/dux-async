@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 $file = __DIR__ . '/../vendor/autoload.php';
@@ -26,7 +27,18 @@ $logoTemplate = <<<'ASCII'
                      /___/                                      /___/        
 ASCII;
 
-App::create(basePath: __DIR__, port: 1337, logo: $logoTemplate);
+App::create(basePath: __DIR__, port: 1337, logo: $logoTemplate, debug: true);
 
+App::web()->get('/', function (ServerRequestInterface $request, ResponseInterface $response) {
+
+
+    // 测试数据库连接池
+    for ($i = 0; $i < 10; $i++) {
+        App::db()->getConnection()->table('system_user')->first();
+    }
+
+
+    return sendText($response, 'hello');
+});
 
 App::run();

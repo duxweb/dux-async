@@ -17,7 +17,7 @@ use Throwable;
 class ErrorHandler extends slimErrorHandler
 {
 
-    protected function getRenderer(string $contentType): callable
+    protected function getRenderer(?string $contentType = null): callable
     {
         $renderer = $this->errorRenderers[$contentType];
         return $this->callableResolver->resolve($renderer);
@@ -38,7 +38,7 @@ class ErrorHandler extends slimErrorHandler
             $response = $response->withHeader('Allow', $allowedMethods);
         }
 
-        $renderer = $this->getRenderer($contentType);
+        $renderer = $this->getRenderer($response->getHeaderLine('Content-type'));
         $body = call_user_func($renderer, $this->exception, $this->displayErrorDetails);
         if ($body !== false) {
             $response->getBody()->write($body);

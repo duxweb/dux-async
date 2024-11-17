@@ -1,1 +1,1 @@
-registers = ["App\\Test\\App"]
+registers = []

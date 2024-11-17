@@ -16,32 +16,31 @@ final class RequestMiddleware implements MiddlewareInterface
 {
     public function __construct(
         private readonly LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         // 生成请求ID
         $requestId = $this->generateRequestId();
-        
+
         // 记录请求开始时间
         $startTime = microtime(true);
-        
+
         // 添加请求ID到请求头
         $request = $request->withAttribute('request_id', $requestId);
-        
+
         // 获取请求信息
         $method = $request->getMethod();
         $uri = (string) $request->getUri();
         $ip = $request->getServerParams()['REMOTE_ADDR'] ?? '-';
-        
+
         try {
             // 处理请求
             $response = $handler->handle($request);
 
             $duration = (microtime(true) - $startTime) * 1000;
 
-            $this->logger->info("Request Completed", [
+            $this->logger->info("", [
                 'request_id' => $requestId,
                 'method' => $method,
                 'uri' => $uri,
@@ -49,9 +48,8 @@ final class RequestMiddleware implements MiddlewareInterface
                 'status' => $response->getStatusCode(),
                 'duration' => round($duration, 2) . 'ms',
             ]);
-            
+
             return $response->withHeader('X-Request-ID', $requestId);
-            
         } catch (\Throwable $e) {
 
             $duration = (microtime(true) - $startTime) * 1000;
@@ -70,8 +68,8 @@ final class RequestMiddleware implements MiddlewareInterface
         }
     }
 
-    
-    private function generateRequestId(): string 
+
+    private function generateRequestId(): string
     {
         return sprintf(
             '%x-%x-%s',
