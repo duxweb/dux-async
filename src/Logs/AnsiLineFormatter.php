@@ -47,6 +47,9 @@ class AnsiLineFormatter extends LineFormatter
         if (isset($record->extra['file'])) {
             $caller = $this->getCallerInfo($record->extra['file']);
         }
+        if (isset($record->context['file'])) {
+            $caller = $this->getCallerInfo($record->context['file']);
+        }
 
         $context = $this->formatContext($context);
 

@@ -97,8 +97,6 @@ class Bootstrap
         $errorHandler->registerErrorRenderer("text/xml", ErrorXmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/html", ErrorHtmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/plain", ErrorPlainRenderer::class);
-
-        //$this->web->addMiddleware(new StaticMiddleware);
     }
 
 

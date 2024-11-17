@@ -40,7 +40,7 @@ final class RequestMiddleware implements MiddlewareInterface
 
             $duration = (microtime(true) - $startTime) * 1000;
 
-            $this->logger->info("", [
+            $this->logger->info(200, [
                 'request_id' => $requestId,
                 'method' => $method,
                 'uri' => $uri,
@@ -53,7 +53,7 @@ final class RequestMiddleware implements MiddlewareInterface
         } catch (\Throwable $e) {
 
             $duration = (microtime(true) - $startTime) * 1000;
-            $this->logger?->error("Failed", [
+            $this->logger?->error($e->getCode() ?? 500, [
                 'file' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine()

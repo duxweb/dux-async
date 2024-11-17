@@ -68,7 +68,7 @@ coroutineTest('transaction', function () {
     expect($data)->toBeArray();
 });
 
-coroutineTest('transaction in same coroutine', function () {
+coroutineTest('rollback', function () {
     // 清理数据
     App::db()->getConnection()->table('table')->truncate();
 
@@ -87,7 +87,7 @@ coroutineTest('transaction in same coroutine', function () {
     expect($data)->toHaveCount(0);
 });
 
-coroutineTest('transaction isolation between coroutines', function () {
+coroutineTest('coroutines', function () {
     // 清理数据
     App::db()->getConnection()->table('table')->truncate();
 

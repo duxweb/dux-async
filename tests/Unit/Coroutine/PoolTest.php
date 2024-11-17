@@ -145,7 +145,6 @@ coroutineTest('auto', function () {
       expect($conn)->toBeInstanceOf(TestConnection::class);
       $connections[] = $conn;
     }
-    dump($pool->getCurrentSize());
     expect($pool->getCurrentSize())->toBe(5);
 
     // 2. 测试收缩
