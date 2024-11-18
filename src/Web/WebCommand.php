@@ -5,7 +5,6 @@ declare(strict_types=1);
 
 namespace Core\Web;
 
-use Chubbyphp\SwooleRequestHandler\PsrRequestFactory;
 use Chubbyphp\SwooleRequestHandler\SwooleResponseEmitter;
 use Core\App;
 use Core\Coroutine\ContextManage;
