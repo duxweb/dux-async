@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Route;
@@ -60,25 +61,27 @@ class Register
                 }
                 $groupInfo = $annotation;
             }
-            if (!$groupInfo) {
-                continue;
-            }
 
-            $groupClass = $item["class"];
-            $appName = $groupInfo["params"]["app"];
-            $groupName = $groupInfo["params"]["name"];
+            $routeGroup = null;
+            if ($groupInfo) {
+                $groupClass = $item["class"];
+                $groupParams = $groupInfo["params"];
+                $appName = $groupParams["app"];
+                $groupName = $groupParams["name"];
 
-            if (!$appName) {
-                throw new \Exception("class [" . $groupClass . "] route attribute parameter missing \"app\" ");
-            }
+                if (!$appName) {
+                    throw new \Exception("class [" . $groupClass . "] route attribute parameter missing \"app\" ");
+                }
 
-            if (!$groupName) {
+                if (!$groupName) {
                     // 获取当前类和应用目录
-                [$_, $_, $name] = $this->parseClass($groupClass);
-                $groupName = $name;
+                    [$_, $_, $name] = $this->parseClass($groupClass);
+                    $groupName = $name;
+                }
+
+                $routeGroup = $this->get($appName)->group($groupParams["route"], $groupName, ...($groupParams["middleware"] ?? []));
             }
 
-            $routeGroup = $this->get($appName)->group($groupInfo["params"]["route"], $name, ...($groupInfo["params"]["middleware"] ?? []));
 
             foreach ($item["annotations"] as $annotation) {
                 if ($annotation["name"] != \Core\Route\Attribute\Route::class) {
@@ -88,23 +91,37 @@ class Register
                 $params = $annotation["params"];
                 $class = $annotation["class"];
                 $name = $params["name"];
+                $appName = $params["app"];
 
                 if (!$name) {
                     [$className, $methodName, $name] = $this->parseClass($class);
                 }
 
-                $routeGroup->map(
-                    methods: is_array($params["methods"]) ? $params["methods"] : [$params["methods"]],
-                    pattern: $params["route"] ?? "",
-                    callable: $class,
-                    name: lcfirst($methodName),
-                    middleware: $params["middleware"] ?? []
-                );
-            }                
-        }
+                if ($routeGroup) {
+                    $routeGroup->map(
+                        methods: is_array($params["methods"]) ? $params["methods"] : [$params["methods"]],
+                        pattern: $params["route"] ?? "",
+                        callable: $class,
+                        name: lcfirst($methodName),
+                        middleware: $params["middleware"] ?? []
+                    );
+                } else {
+                    if (!$appName) {
+                        throw new \Exception("class [" . $class . "] route attribute parameter missing \"app\" ");
+                    }
 
+                    $this->get($appName)->map(
+                        methods: is_array($params["methods"]) ? $params["methods"] : [$params["methods"]],
+                        pattern: $params["route"] ?? "",
+                        callable: $class,
+                        name: lcfirst($methodName),
+                        middleware: $params["middleware"] ?? []
+                    );
+                }
+            }
+        }
     }
-    
+
     private function parseClass(string $class): array
     {
         [$className, $methodName] = explode(":", $class, 2);

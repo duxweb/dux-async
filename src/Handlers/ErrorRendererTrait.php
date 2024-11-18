@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Core\Handlers;
 
 use Slim\Exception\HttpException;
@@ -9,8 +11,8 @@ trait ErrorRendererTrait
 {
     protected function getErrorTitle(Throwable $exception): string
     {
-        if ($exception instanceof HttpException) {
-            return $exception->getTitle();
+        if ($exception instanceof HttpException || $exception instanceof Exception) {
+            return $exception->getMessage();
         }
 
         return __('error.errorTitle', 'common');

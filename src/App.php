@@ -15,6 +15,8 @@ use Core\Lock\Lock;
 use Core\Logs\LogHandler;
 use Core\Queue\Queue;
 use Core\Redis\Redis;
+use Core\Storage\Contracts\StorageInterface;
+use Core\Storage\Storage;
 use Core\Translation\TomlFileLoader;
 use Core\Views\Render;
 use DI\Container;
@@ -330,6 +332,23 @@ class App
             );
         }
         return self::$di->get("queue");
+    }
+
+    public static function storage(string $type = ""): StorageInterface
+    {
+        if (!$type) {
+            $type = self::config("storage")->get("type");
+        }
+        if (!self::$di->has("storage." . $type)) {
+            $config = self::config("storage")->get("drivers." . $type);
+            $storageType = $config["type"];
+            unset($config["type"]);
+            self::$di->set(
+                "storage." . $type,
+                new Storage($storageType, $config)
+            );
+        }
+        return self::$di->get("storage." . $type)->getInstance();
     }
 
     public static function geo(): XdbSearcher|null

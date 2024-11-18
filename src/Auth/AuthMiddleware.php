@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dux\Auth;
+namespace Core\Auth;
 
 use Core\Utils\Attribute;
 use Firebase\JWT\JWT;
