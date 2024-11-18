@@ -36,6 +36,7 @@ class AuthMiddleware
         $app = $this->app;
         $jwt = new \JimTools\JwtAuth\Middleware\JwtAuthentication(
             new Options(
+                isSecure: false,
                 before: new class($app) implements BeforeHandlerInterface {
                     public function __construct(public string $app) {}
                     public function __invoke(Request $request, array $arguments): Request

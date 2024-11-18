@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Utils;
@@ -28,25 +29,26 @@ class Attribute
         }
         $callable = $route->getCallable();
         if (!is_array($callable)) {
-            $class = $callable;
-            $method = null;
+            [$class, $method] = explode(':', $callable);
         } else {
             $class = $callable[0];
             $method = $callable[1] ?? null;
         }
 
+        dump($callable);
+
         $reflectionClass = new \ReflectionClass($class);
         $attributes = $reflectionClass->getAttributes();
 
         if ($method) {
-          $reflectionMethod = $reflectionClass->getMethod($method);
-          $attributes = $reflectionMethod->getAttributes();
-          foreach ($attributes as $attribute) {
-              $args = $attribute->getArguments();
-              if (isset($args[$name])) {
-                  return $args[$name];
-              }
-          }
+            $reflectionMethod = $reflectionClass->getMethod($method);
+            $attributes = $reflectionMethod->getAttributes();
+            foreach ($attributes as $attribute) {
+                $args = $attribute->getArguments();
+                if (isset($args[$name])) {
+                    return $args[$name];
+                }
+            }
         }
 
         foreach ($attributes as $attribute) {
@@ -58,5 +60,4 @@ class Attribute
 
         return null;
     }
-
 }
