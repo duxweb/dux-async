@@ -54,8 +54,10 @@ class ApiMiddleware
         }
         $signData = [];
         $signData[] = $request->getUri()->getPath();
-        $signData[] = urldecode($request->getUri()->getQuery());
+        $signData[] = rawurldecode($request->getUri()->getQuery());
         $signData[] = $time;
+
+        dump($request->getUri()->getQuery(), $signData);
         $signStr = hash_hmac("SHA256", implode("\n", $signData), $secretKey);
         return $signStr === $sign;
     }
