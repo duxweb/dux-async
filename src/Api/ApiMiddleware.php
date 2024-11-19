@@ -24,7 +24,7 @@ class ApiMiddleware
 
         // 请求超时
         if (!$this->allowTimestamp($request)) {
-            throw new ExceptionBusiness('Request Timeout', 408);
+            //throw new ExceptionBusiness('Request Timeout', 408);
         }
         // 签名失败
         if (!$this->signVerify($request)) {
