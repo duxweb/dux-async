@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Storage\Drivers;
@@ -15,6 +16,7 @@ class S3Driver implements StorageInterface
     private string $endpoint;
     private string $region;
     private bool $ssl;
+    private string $version;
     private bool $immutable;
 
     public function __construct(array $config, ?S3Client $client = null)
@@ -23,6 +25,7 @@ class S3Driver implements StorageInterface
         $this->domain = $config['domain'] ?? '';
         $this->endpoint = $config['endpoint'] ?? '';
         $this->region = $config['region'] ?? '';
+        $this->version = $config['version'] ?? 'latest';
         $this->ssl = $config['ssl'] ?? true;
         $this->immutable = $config['immutable'] ?? false;
 
@@ -30,13 +33,13 @@ class S3Driver implements StorageInterface
             $this->client = $client;
         } else {
             $this->client = new S3Client([
-                'version' => 'latest',
+                'version' => $this->version,
                 'region'  => $this->region,
+                'endpoint' => ($this->ssl ? 'https' : 'http') . '://' . $this->endpoint,
                 'credentials' => [
                     'key'    => $config['access_key'],
                     'secret' => $config['secret_key'],
                 ],
-                'use_path_style_endpoint' => true,
             ]);
         }
     }
@@ -48,6 +51,7 @@ class S3Driver implements StorageInterface
                 'Bucket' => $this->bucket,
                 'Key'    => $path,
                 'Body'   => $contents,
+                'ContentType' => $this->getContentType($contents),
             ]);
             return true;
         } catch (\Exception $e) {
@@ -62,11 +66,28 @@ class S3Driver implements StorageInterface
                 'Bucket' => $this->bucket,
                 'Key'    => $path,
                 'Body'   => $resource,
+                'ContentType' => $this->getContentType($resource),
+
             ]);
             return true;
         } catch (\Exception $e) {
             throw new StorageException("Failed to write stream: {$path}, " . $e->getMessage());
         }
+    }
+
+    private function getContentType($resource): string
+    {
+        if (is_string($resource)) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            return $finfo->buffer($resource) ?: 'application/octet-stream';
+        } else if (is_resource($resource)) {
+            $position = ftell($resource);
+            $content = stream_get_contents($resource, 8192, 0);
+            fseek($resource, $position);
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            return $finfo->buffer($content) ?: 'application/octet-stream';
+        }
+        return 'application/octet-stream';
     }
 
     public function read(string $path): string
@@ -151,7 +172,7 @@ class S3Driver implements StorageInterface
             'Bucket' => $this->bucket,
             'Key'    => $path,
         ]);
-        
+
         return (string) $this->client->createPresignedRequest($command, "+{$expires} seconds")->getUri();
     }
 
@@ -179,7 +200,7 @@ class S3Driver implements StorageInterface
             'Bucket' => $this->bucket,
             'Key'    => $path,
         ]);
-        
+
         return (string) $this->client->createPresignedRequest($command, '+20 minutes')->getUri();
     }
 
@@ -187,4 +208,4 @@ class S3Driver implements StorageInterface
     {
         return false;
     }
-} 
+}

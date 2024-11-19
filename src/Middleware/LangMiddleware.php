@@ -21,7 +21,7 @@ final class LangMiddleware implements MiddlewareInterface
     {
         $acceptLanguage = $request->getHeaderLine('Accept-Language');
         $lang = $this->parseAcceptLanguage($acceptLanguage);
-        
+
         ContextManage::context()->setValue('lang', $lang);
         $request = $request->withAttribute('lang', $lang);
         return $handler->handle($request);
@@ -32,15 +32,15 @@ final class LangMiddleware implements MiddlewareInterface
         if (empty($acceptLanguage)) {
             return 'en-US';
         }
-        
+
         $languages = explode(',', $acceptLanguage);
-        
+
         $primaryLang = trim($languages[0]);
-        
+
         if (str_contains($primaryLang, ';')) {
             $primaryLang = explode(';', $primaryLang)[0];
         }
-        
+
         return trim($primaryLang);
     }
 }
