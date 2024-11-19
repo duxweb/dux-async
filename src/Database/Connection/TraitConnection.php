@@ -26,7 +26,7 @@ trait TraitConnection
             callback: function () use ($connector, $config) {
                 $con = new $connector();
                 $config['options'] = [
-                    PDO::ATTR_PERSISTENT => false,
+                    PDO::ATTR_PERSISTENT => true,
                 ];
                 return $con->connect($config);
             },
