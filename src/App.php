@@ -357,7 +357,7 @@ class App
             $db = self::config("geo")->get("db");
 
             if ($db && is_file($db)) {
-                $cBuff = XdbSearcher::loadContentFromFile($db);
+                $cBuff = XdbSearcher::loadContentFromFile(config_path($db));
                 $ip2region = XdbSearcher::newWithBuffer($cBuff);
             } else {
                 $ip2region = null;
