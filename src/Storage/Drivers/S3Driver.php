@@ -35,11 +35,13 @@ class S3Driver implements StorageInterface
             $this->client = new S3Client([
                 'version' => $this->version,
                 'region'  => $this->region,
+                'bucket' => $this->bucket,
                 'endpoint' => ($this->ssl ? 'https' : 'http') . '://' . $this->endpoint,
                 'credentials' => [
                     'key'    => $config['access_key'],
                     'secret' => $config['secret_key'],
                 ],
+                //'use_path_style_endpoint' => false,
             ]);
         }
     }
@@ -178,19 +180,27 @@ class S3Driver implements StorageInterface
 
     public function signPostUrl(string $path): array
     {
-        $formInputs = ['acl' => 'private'];
-        $options = ['expires' => '+20 minutes'];
+        $formInputs = [
+            'key' => $path,
+        ];
+
+        $options = [
+            ['bucket' => $this->bucket],
+        ];
 
         $postObject = new \Aws\S3\PostObjectV4(
             $this->client,
             $this->bucket,
             $formInputs,
-            $options
+            $options,
         );
 
+        $formAttributes = $postObject->getFormAttributes();
+        $formInputs = $postObject->getFormInputs();
+
         return [
-            'url' => $postObject->getFormAttributes()['action'],
-            'params' => $postObject->getFormInputs(),
+            'url' => $formAttributes['action'],
+            'params' => $formInputs
         ];
     }
 
