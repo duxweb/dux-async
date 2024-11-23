@@ -50,10 +50,13 @@ class WebCommand extends Command
 
             $http = new Server($host, $port, false);
 
+
+            $swooleConfig = App::config('use')->get('swoole', []);
             $http->set([
                 'debug_mode' => true,
                 'enable_preemptive_scheduler' => true,
-                'hook_flags' => SWOOLE_HOOK_ALL
+                'hook_flags' => SWOOLE_HOOK_ALL,
+                ...$swooleConfig
             ]);
 
             $factory = new PsrRequestFactory(
