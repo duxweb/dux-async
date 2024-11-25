@@ -356,7 +356,7 @@ class App
         if (!self::$di->has("geo")) {
             $db = self::config("geo")->get("db");
 
-            $dbFile = config_path($db);
+            $dbFile = config_path($db ?: '');
             if ($db && is_file($dbFile)) {
                 $cBuff = XdbSearcher::loadContentFromFile($dbFile);
                 $ip2region = XdbSearcher::newWithBuffer($cBuff);
