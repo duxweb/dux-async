@@ -35,8 +35,6 @@ class Attribute
             $method = $callable[1] ?? null;
         }
 
-        dump($callable);
-
         $reflectionClass = new \ReflectionClass($class);
         $attributes = $reflectionClass->getAttributes();
 
