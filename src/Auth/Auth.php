@@ -24,7 +24,7 @@ class Auth
         return 'Bearer ' . JWT::encode($payload, App::config("use")->get("app.secret"), 'HS256');
     }
 
-    public function decode(Request $request, string $app): ?array
+    public static function decode(Request $request, string $app): ?array
     {
         $jwtStr = str_replace('Bearer ', '', $request->getHeaderLine('Authorization'));
         try {
