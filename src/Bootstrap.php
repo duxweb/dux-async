@@ -135,6 +135,9 @@ class Bootstrap
         // 注解路由注册
         App::route()->registerAttribute();
 
+        // 注册事件
+        App::event()->registerAttribute();
+
         // 普通路由注册
         foreach (App::route()->app as $route) {
             $route->run($this->web);
