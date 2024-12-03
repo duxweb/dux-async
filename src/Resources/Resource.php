@@ -50,7 +50,7 @@ class Resource
             ...$this->getAllMiddleware()
         ];
 
-        App::route()->set($this->name, new Route($this->route, ...$middle));
+        App::route()->set($this->name, new Route($this->route, $this->name, ...$middle));
         App::permission()->set($this->name, new Permission());
     }
 }
