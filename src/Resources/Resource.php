@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Resources;
@@ -6,16 +7,14 @@ namespace Core\Resources;
 use Core\App;
 use Core\Permission\Permission;
 use Core\Route\Route;
-use Dux\Auth\AuthMiddleware;
+use Core\Auth\AuthMiddleware;
 
 class Resource
 {
     private array $authMiddleware = [];
     private array $middleware = [];
 
-    public function __construct(public string $name, public string $route)
-    {
-    }
+    public function __construct(public string $name, public string $route) {}
 
     public function addMiddleware(object ...$middleware): self
     {
