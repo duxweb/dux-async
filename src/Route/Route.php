@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Route;
@@ -193,10 +194,10 @@ class Route
      * @param int $priority
      * @return void
      */
-    public function map(array $methods, string $pattern, string|callable $callable, ?string $name, array $middleware = [], int $priority = 0): void
+    public function map(string|array $methods, string $pattern, string|callable $callable, ?string $name, array $middleware = [], int $priority = 0): void
     {
         $this->data[] = [
-            "methods" => $methods,
+            "methods" => is_array($methods) ? $methods : [$methods],
             "pattern" => $pattern,
             "callable" => $callable,
             "name" => $name ? ($this->name ? $this->name . "." . $name : $name) : '',
@@ -304,5 +305,4 @@ class Route
             $route->add($middle);
         }
     }
-
 }

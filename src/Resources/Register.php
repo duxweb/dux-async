@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Resources;
@@ -99,7 +100,7 @@ class Register
 
                 $routeGroup->map($params["methods"], $params["route"], $class, $name);
                 if ($permissionGroup) {
-                    $permissionGroup->add($params["name"]);
+                    $permissionGroup->add($name);
                 }
             }
 
@@ -115,7 +116,7 @@ class Register
                 actions: $resInfo["params"]["actions"] ?? [],
                 softDelete: (bool)$resInfo["params"]["softDelete"]
             );
-        }        
+        }
     }
 
     private function getMethod($class): string
