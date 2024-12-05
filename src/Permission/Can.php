@@ -1,6 +1,6 @@
 <?php
 
-namespace Can\Permission;
+namespace Core\Permission;
 
 use Core\App;
 use Core\Handlers\ExceptionBusiness;
@@ -29,5 +29,4 @@ class Can
             throw new ExceptionBusiness('The user does not have permission', 403);
         }
     }
-
 }

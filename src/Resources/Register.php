@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Core\Resources;
 
 use Core\App;
-use Core\Bootstrap;
 use Core\Resources\Attribute\Action;
 use Core\Resources\Attribute\Resource;
 use DI\DependencyException;

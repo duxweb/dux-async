@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Resources\Attribute;
@@ -21,7 +22,5 @@ class Action
         string       $name = '',
         ?bool        $auth = null,
         bool        $can = true,
-    )
-    {
-    }
+    ) {}
 }
