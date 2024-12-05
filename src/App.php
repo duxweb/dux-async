@@ -191,7 +191,7 @@ class App
                     'min_workers' => 10,
                     'max_workers' => 10000,
                 ]),
-                logger: App::log('worker', App::$debug ? Level::Debug : Level::Info),
+                logger: App::log('worker', Level::Info),
             ));
         }
         return self::$di->get("worker");
@@ -319,7 +319,7 @@ class App
     {
         if (!self::$di->has("queue")) {
             $config = self::config("queue");
-            $queue = new Queue($config->get("driver", "sqlite"), $config->get("params", []), App::log('queue', App::$debug ? Level::Debug : Level::Info));
+            $queue = new Queue($config->get("driver", "sqlite"), $config->get("params", []), App::log('queue', Level::Info));
 
             $workers = $config->get('workers', []);
             foreach ($workers as $worker) {

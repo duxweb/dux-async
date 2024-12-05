@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core\Handlers;
 
+use Core\App;
 use Slim\Exception\HttpException;
 use Throwable;
 
@@ -11,7 +12,7 @@ trait ErrorRendererTrait
 {
     protected function getErrorTitle(Throwable $exception): string
     {
-        if ($exception instanceof HttpException || $exception instanceof Exception) {
+        if (App::$debug || $exception instanceof HttpException || $exception instanceof Exception) {
             return $exception->getMessage();
         }
 

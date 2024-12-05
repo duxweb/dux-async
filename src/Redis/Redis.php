@@ -27,7 +27,7 @@ class Redis
             maxOpen: $config['pool']['max_open'] ?? 100,
             timeOut: $config['pool']['timeout'] ?? 10,
             idleTime: $config['pool']['idle_time'] ?? 60,
-            logger: App::log('redis_pool', App::$debug ? Level::Debug : Level::Info),
+            logger: App::log('redis_pool', Level::Info),
         );
     }
 
