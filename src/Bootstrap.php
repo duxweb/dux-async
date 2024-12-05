@@ -15,6 +15,7 @@ use Core\Handlers\ErrorHtmlRenderer;
 use Core\Handlers\ErrorJsonRenderer;
 use Core\Handlers\ErrorPlainRenderer;
 use Core\Handlers\ErrorXmlRenderer;
+use Core\Middleware\CorsMiddleware;
 use Core\Middleware\LangMiddleware;
 use Core\Middleware\RequestMiddleware;
 use Core\Permission\PermissionCommand;
@@ -87,6 +88,7 @@ class Bootstrap
         // 注册请求中间件
         $this->web->addMiddleware(new LangMiddleware);
         $this->web->addMiddleware(new RequestMiddleware(App::log('request')));
+        $this->web->addMiddleware(new CorsMiddleware);
         // 注册授权异常
         $errorMiddleware = $this->web->addErrorMiddleware(App::$debug, true, true);
         // 注册异常
@@ -97,6 +99,11 @@ class Bootstrap
         $errorHandler->registerErrorRenderer("text/xml", ErrorXmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/html", ErrorHtmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/plain", ErrorPlainRenderer::class);
+
+        // 注册OPTIONS请求
+        $this->web->options('/{routes:.+}', function ($request, $response, $args) {
+            return $response;
+        });
     }
 
 

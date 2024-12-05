@@ -2,18 +2,11 @@
 
 namespace Core\Middleware;
 
-use Core\App;
-use Core\Coroutine\Context;
 use Core\Coroutine\ContextManage;
-use Core\Utils\Fmt;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Psr\Log\LoggerInterface;
-use ReflectionClass;
-use Slim\Routing\RouteContext;
-use Swoole\Coroutine;
 
 final class LangMiddleware implements MiddlewareInterface
 {
