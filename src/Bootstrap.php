@@ -85,12 +85,6 @@ class Bootstrap
         $this->web->addBodyParsingMiddleware();
         // 注册路由中间件
         $this->web->addRoutingMiddleware();
-        // 注册OPTIONS请求
-        $this->web->options('/{routes:.+}', function ($request, $response, $args) {
-            return $response;
-        });
-        // 注册跨域中间件
-        $this->web->addMiddleware(new CorsMiddleware);
         // 注册请求中间件
         $this->web->addMiddleware(new LangMiddleware);
         $this->web->addMiddleware(new RequestMiddleware(App::log('request')));
@@ -104,6 +98,12 @@ class Bootstrap
         $errorHandler->registerErrorRenderer("text/xml", ErrorXmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/html", ErrorHtmlRenderer::class);
         $errorHandler->registerErrorRenderer("text/plain", ErrorPlainRenderer::class);
+        // 注册OPTIONS请求
+        $this->web->options('/{routes:.+}', function ($request, $response, $args) {
+            return $response;
+        });
+        // 注册跨域中间件
+        $this->web->addMiddleware(new CorsMiddleware);
     }
 
 
