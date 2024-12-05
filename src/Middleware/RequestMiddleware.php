@@ -20,6 +20,7 @@ final class RequestMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+
         // 生成请求ID
         $requestId = $this->generateRequestId();
 
@@ -33,6 +34,10 @@ final class RequestMiddleware implements MiddlewareInterface
         $method = $request->getMethod();
         $uri = (string) $request->getUri();
         $ip = $request->getServerParams()['REMOTE_ADDR'] ?? '-';
+
+        if (str_contains($uri, '/static/') || str_contains($uri, '/favicon.ico') || str_contains($uri, '/upload/')) {
+            return $handler->handle($request);
+        }
 
         try {
             // 处理请求
