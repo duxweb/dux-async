@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Permission;
@@ -8,9 +9,7 @@ class PermissionGroup
     private array $data = [];
     public static array $actions = ['list', 'show', 'create', 'edit', 'store', 'delete'];
 
-    public function __construct(public string $app, public string $name, public string $label)
-    {
-    }
+    public function __construct(public string $app, public string $name, public string $label) {}
 
     public function add(string $name): void
     {
@@ -52,13 +51,9 @@ class PermissionGroup
 
     public function get(): array
     {
-        $children = [];
-        foreach ($this->data as $vo) {
-            $children[] = $vo->get();
-        }
         return [
             "name" => "group:" . $this->name,
-            "children" => $children,
+            "children" => $this->data,
         ];
     }
 
