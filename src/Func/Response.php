@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use Core\App;
@@ -15,7 +16,7 @@ use Psr\Http\Message\ResponseInterface;
  * @param int $code
  * @return ResponseInterface
  */
-function send(ResponseInterface $response, string $message, array $data = [], array $meta = [], int $code = 200): ResponseInterface
+function send(ResponseInterface $response, string $message, array|object|null $data = null, array $meta = [], int $code = 200): ResponseInterface
 {
     $result = [];
     $result["code"] = $code;
