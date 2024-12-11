@@ -145,6 +145,9 @@ class Route
      */
     public function resources(string $class, array|false $actions = [], bool $softDelete = false): self
     {
+        if ($actions === false) {
+            return $this;
+        }
 
         if (!$actions) {
             $actions = self::$actions;
