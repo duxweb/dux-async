@@ -49,7 +49,7 @@ class App
     public static bool $debug = true;
     public static string $logo = '';
     public static string $lang = '';
-    public static string $timezone = '';
+    public static string $timezone = 'UTC';
     public static ?string $host = null;
     public static ?int $port = null;
 

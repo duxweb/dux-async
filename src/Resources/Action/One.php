@@ -22,10 +22,9 @@ trait One
             $this->event->run('queryOne', $query, $request, $args);
             $this->event->run('query', $query);
             $info = $query->first();
-            $assign = $this->transformData($info, function ($item) {
-                return [...$this->transform($item), ...$this->event->get('transform', $item)];
+            $assign = $this->transformData($info, function ($item) use ($request) {
+                return [...$this->transform($item, $request), ...$this->event->get('transform', $item)];
             });
-
         } else {
             $assign = [
                 'data' => null,
@@ -44,5 +43,4 @@ trait One
 
         return send($response, "ok", $assign['data'], $assign['meta']);
     }
-
 }
