@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core\Auth;
 
+use Core\Handlers\ExceptionBusiness;
 use Core\Utils\Attribute;
 use Firebase\JWT\JWT;
 use JimTools\JwtAuth\Decoder\FirebaseDecoder;
@@ -67,6 +68,10 @@ class AuthMiddleware
             ),
             new FirebaseDecoder(new Secret($secret, 'HS256')),
         );
-        return $jwt->process($request, $handler);
+        try {
+            return $jwt->process($request, $handler);
+        } catch (\Exception $e) {
+            throw new ExceptionBusiness('Authorization error', 401, $e);
+        }
     }
 }
