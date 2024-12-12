@@ -52,21 +52,24 @@ class AuthMiddleware
                     public function __construct(public string $secret, public string $app, public \Closure|null $callback = null) {}
                     public function __invoke(Response $response, array $arguments): Response
                     {
+                        $tokenStr = $arguments["token"];
                         $token = $arguments["decoded"];
                         if ($this->app != $token["sub"]) {
                             throw new \Core\Handlers\ExceptionBusiness("Authorization app error", 401);
-                        }
-                        if ($this->callback !== null) {
-                            ($this->callback)($token);
                         }
 
                         $expire =  $token["exp"] - $token["iat"];
                         $renewalTime = $token["iat"] + round($expire / 3);
                         $time = time();
+                        $auth = null;
                         if ($renewalTime <= $time) {
                             $token["exp"] = $time + $expire;
                             $auth = JWT::encode($token, $this->secret, 'HS256');
                             return $response->withHeader("Authorization", "Bearer $auth");
+                        }
+
+                        if ($this->callback !== null) {
+                            ($this->callback)($tokenStr, $auth);
                         }
                         return $response;
                     }
