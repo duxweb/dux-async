@@ -20,6 +20,7 @@ class AuthMiddleware
 {
     public function __construct(
         public string $app,
+        public \Closure|null $callback = null
     ) {}
 
     public function __invoke(Request $request, RequestHandler $handler): Response
@@ -35,6 +36,7 @@ class AuthMiddleware
 
         $secret = \Core\App::config("use")->get("app.secret");
         $app = $this->app;
+        $callback = $this->callback;
         $jwt = new \JimTools\JwtAuth\Middleware\JwtAuthentication(
             new Options(
                 isSecure: false,
@@ -46,14 +48,18 @@ class AuthMiddleware
                         return $request->withAttribute('auth', $token)->withAttribute('app', $this->app);
                     }
                 },
-                after: new class($secret, $app) implements AfterHandlerInterface {
-                    public function __construct(public string $secret, public string $app) {}
+                after: new class($secret, $app, $callback) implements AfterHandlerInterface {
+                    public function __construct(public string $secret, public string $app, public \Closure|null $callback = null) {}
                     public function __invoke(Response $response, array $arguments): Response
                     {
                         $token = $arguments["decoded"];
                         if ($this->app != $token["sub"]) {
                             throw new \Core\Handlers\ExceptionBusiness("Authorization app error", 401);
                         }
+                        if ($this->callback !== null) {
+                            ($this->callback)($token);
+                        }
+
                         $expire =  $token["exp"] - $token["iat"];
                         $renewalTime = $token["iat"] + round($expire / 3);
                         $time = time();
