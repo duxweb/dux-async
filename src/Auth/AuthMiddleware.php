@@ -79,7 +79,7 @@ class AuthMiddleware
         );
         try {
             return $jwt->process($request, $handler);
-        } catch (\Exception $e) {
+        } catch (\JimTools\JwtAuth\Exceptions\AuthorizationException $e) {
             throw new ExceptionBusiness('Authorization error', 401, $e);
         }
     }
