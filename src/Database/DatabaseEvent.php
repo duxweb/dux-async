@@ -9,9 +9,7 @@ class DatabaseEvent extends Event
 
     private array $data = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function retrieved(callable $fun): void
     {
@@ -78,7 +76,7 @@ class DatabaseEvent extends Event
 
     public function run(string $name, $info = null): void
     {
-        if (!$this->data[$name]) {
+        if (!isset($this->data[$name])) {
             return;
         }
         foreach ($this->data[$name] as $vo) {
