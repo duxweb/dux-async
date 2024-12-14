@@ -41,14 +41,18 @@ final class RequestMiddleware implements MiddlewareInterface
 
             $duration = (microtime(true) - $startTime) * 1000;
 
-            $this->logger->info(200, [
-                'request_id' => $requestId,
-                'method' => $method,
-                'uri' => $uri,
-                'ip' => $ip,
-                'status' => $response->getStatusCode(),
-                'duration' => round($duration, 2) . 'ms',
-            ]);
+            try {
+                $this->logger->info(200, [
+                    'request_id' => $requestId,
+                    'method' => $method,
+                    'uri' => $uri,
+                    'ip' => $ip,
+                    'status' => $response->getStatusCode(),
+                    'duration' => round($duration, 2) . 'ms',
+                ]);
+            } catch (\Exception $logException) {
+                error_log("log write error: " . $logException->getMessage());
+            }
 
             return $response->withHeader('X-Request-ID', $requestId);
         } catch (\Throwable $e) {
@@ -56,14 +60,14 @@ final class RequestMiddleware implements MiddlewareInterface
             $duration = (microtime(true) - $startTime) * 1000;
             $this->logger?->error($e->getCode() ?? 500, [
                 'file' => [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'file' => $e?->getFile(),
+                    'line' => $e?->getLine()
                 ],
                 'request_id' => $requestId,
                 'method' => $method,
                 'duration' => round($duration, 2) . 'ms',
                 'uri' => $uri,
-                'error' => $e->getMessage(),
+                'error' => $e?->getMessage(),
             ]);
             throw $e;
         }
