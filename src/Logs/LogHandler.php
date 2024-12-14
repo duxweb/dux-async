@@ -20,6 +20,7 @@ class LogHandler
         $streamHandler = new StreamHandler('php://stdout', $level);
         $streamHandler->setFormatter(new AnsiLineFormatter());
         $logger = new Logger($name);
+        $logger->useLoggingLoopDetection(false);
         $logger->pushHandler($fileHandle);
         $logger->pushHandler($streamHandler);
         $logger->pushProcessor(function (LogRecord $record) {
