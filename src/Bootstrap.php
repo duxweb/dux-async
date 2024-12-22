@@ -67,7 +67,7 @@ class Bootstrap
         // 注册web服务
         AppFactory::setContainer(App::di());
         $this->web = AppFactory::create();
-        App::$debug = App::config("app")->get("debug", false);
+        App::$debug = App::config("use")->get("app.debug", false);
     }
 
 
