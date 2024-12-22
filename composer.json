@@ -40,7 +40,7 @@
     "illuminate/events": "^11.30",
     "doctrine/dbal": "^4.2",
     "fileeye/mimemap": "^2.2",
-    "chubbyphp/chubbyphp-swoole-request-handler": "^1.4",
+    "chubbyphp/chubbyphp-swoole-request-handler": "^1.5",
     "slim/psr7": "^1.7",
     "nunomaduro/termwind": "^2.2",
     "symfony/var-dumper": "^7.1",
