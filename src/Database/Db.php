@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Database;
@@ -18,27 +19,6 @@ class Db
     public static function init(array $configs): Manager
     {
         $capsule = new Manager;
-
-        $capsule->getDatabaseManager()->extend('mysql', function ($config, $name) {
-            if (App::di()->has("db.{$name}")) {
-                return App::di()->get("db.{$name}");
-            }
-            $config['name'] = $name;
-            $initialized =  new MysqlConnection(MySqlConnector::class, $config);
-            App::di()->set("db.{$name}", $initialized);
-            return $initialized;
-        });
-
-        $capsule->getDatabaseManager()->extend('sqlite', function($config, $name) {
-            if (App::di()->has("db.{$name}")) {
-                return App::di()->get("db.{$name}");
-            }
-            $initialized = new SqliteConnection(SQLiteConnector::class, $config);
-            App::di()->set("db.{$name}", $initialized);
-            return $initialized;
-        });
-
-
         foreach ($configs as $key => $config) {
             $capsule->addConnection($config, $key);
         }
@@ -47,5 +27,4 @@ class Db
         $capsule->bootEloquent();
         return $capsule;
     }
-
 }

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Database;
@@ -10,7 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
-class RestoreCommand extends Command {
+class RestoreCommand extends Command
+{
 
 
     protected function configure(): void
@@ -18,13 +20,14 @@ class RestoreCommand extends Command {
         $this->setName("db:restore")->setDescription('Restore the database');
     }
 
-    public function execute(InputInterface $input, OutputInterface $output): int {
+    public function execute(InputInterface $input, OutputInterface $output): int
+    {
 
         $dirPath = data_path('backup/');
         if (!is_dir($dirPath)) {
             mkdir($dirPath);
         }
-        $files = glob($dirPath .'*.sql');
+        $files = glob($dirPath . '*.sql');
         sort($files);
         $latestFile = end($files);
 

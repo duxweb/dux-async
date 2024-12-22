@@ -6,18 +6,20 @@ namespace Core\Lock;
 
 use Core\App;
 use Core\Handlers\Exception;
-use Core\Lock\Store\MemoryStore;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\FlockStore;
 use Symfony\Component\Lock\Store\RedisStore;
+use Symfony\Component\Lock\Store\SemaphoreStore;
 
 class Lock
 {
 
-    public static function init(string $type = 'memory'): LockFactory
+    public static function init(string $type = 'semaphore'): LockFactory
     {
         $store = match ($type) {
+            'flock' =>  new FlockStore(),
             'redis' => new RedisStore(App::redis()),
-            'memory' => new MemoryStore(),
+            'semaphore' => new SemaphoreStore(),
             default => throw new Exception('Lock type does not exist')
         };
         return new LockFactory($store);

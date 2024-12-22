@@ -7,7 +7,6 @@ namespace Core\Database;
 use Core\App;
 use Core\Database\Attribute\AutoMigrate;
 use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Schema\Comparator;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Symfony\Component\Console\Output\OutputInterface;

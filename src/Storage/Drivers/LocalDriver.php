@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Storage\Drivers;
@@ -25,7 +26,7 @@ class LocalDriver implements StorageInterface
     public function write(string $path, string $contents, array $options = []): bool
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
-        
+
         try {
             FileSystem::write($fullPath, $contents);
         } catch (\Throwable $e) {
@@ -38,18 +39,18 @@ class LocalDriver implements StorageInterface
     {
         $fullPath = $this->root . '/' . $this->getUploadPath($path);
         $dir = dirname($fullPath);
-        
+
         if (!is_dir($dir)) {
             if (!mkdir($dir, 0777, true)) {
                 throw new StorageException("Failed to create directory: {$dir}");
             }
         }
-        
+
         $dest = fopen($fullPath, 'wb');
         if ($dest === false) {
             throw new StorageException("Failed to create file: {$path}");
         }
-        
+
         try {
             if (stream_copy_to_stream($resource, $dest) === false) {
                 throw new StorageException("Failed to write stream: {$path}");
@@ -57,7 +58,7 @@ class LocalDriver implements StorageInterface
         } finally {
             fclose($dest);
         }
-        
+
         return true;
     }
 
@@ -67,7 +68,7 @@ class LocalDriver implements StorageInterface
         if (!is_readable($fullPath)) {
             throw new StorageException("File not readable or not found: {$path}");
         }
-        
+
         $contents = file_get_contents($fullPath);
         if ($contents === false) {
             throw new StorageException("Failed to read file: {$path}");
@@ -81,9 +82,9 @@ class LocalDriver implements StorageInterface
         if (!is_readable($fullPath)) {
             throw new StorageException("File not readable or not found: {$path}");
         }
-        
+
         try {
-          $stream = fopen($fullPath, 'rb');
+            $stream = fopen($fullPath, 'rb');
         } catch (\RuntimeException $e) {
             throw new StorageException("Failed to open stream: {$path}");
         }
@@ -91,14 +92,7 @@ class LocalDriver implements StorageInterface
         if ($stream === false) {
             throw new StorageException("Failed to open stream: {$path}");
         }
-        
-        if (function_exists('Swoole\Coroutine::getCid') && \Swoole\Coroutine::getCid() !== -1) {
-            \Swoole\Coroutine::defer(function() use ($stream) {
-                if (is_resource($stream)) {
-                    fclose($stream);
-                }
-            });
-        }
+
         return $stream;
     }
 
@@ -123,7 +117,7 @@ class LocalDriver implements StorageInterface
         if (!file_exists($fullPath)) {
             throw new StorageException("File not found: {$path}");
         }
-        
+
         $size = filesize($fullPath);
         if ($size === false) {
             throw new StorageException("Failed to get file size: {$path}");
@@ -155,7 +149,7 @@ class LocalDriver implements StorageInterface
     {
         $url = $this->getUploadPath($path);
         $sign = $this->getSign($url);
-        
+
         return [
             'url' => $url,
             'params' => [
@@ -169,14 +163,14 @@ class LocalDriver implements StorageInterface
     {
         $url = $this->getUploadPath($path);
         $sign = $this->getSign($url);
-        
+
         $params = http_build_query([
             'sign' => $sign,
             'key' => $path,
         ]);
-        
-        return str_contains($url, '?') 
-            ? $url . '&' . $params 
+
+        return str_contains($url, '?')
+            ? $url . '&' . $params
             : $url . '?' . $params;
     }
 
@@ -200,4 +194,4 @@ class LocalDriver implements StorageInterface
     {
         return true;
     }
-} 
+}

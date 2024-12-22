@@ -1,7 +1,0 @@
-[worker]
-capacity = 1000
-nonblocking = false
-max_queue_size = 100000
-expiry_duration = 10
-min_workers = 10
-

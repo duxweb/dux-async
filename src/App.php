@@ -7,8 +7,6 @@ namespace Core;
 use Core\App\Attribute;
 use Core\Cache\Cache;
 use Core\Config\TomlLoader;
-use Core\Coroutine\Timer;
-use Core\Coroutine\Worker;
 use Core\Database\Migrate;
 use Core\Event\Event;
 use Core\Lock\Lock;
@@ -51,16 +49,14 @@ class App
     public static string $lang = '';
     public static string $timezone = 'UTC';
     public static ?string $host = null;
-    public static ?int $port = null;
 
-    public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = "0.0.0.0", ?int $port = 8900, ?bool $debug = true, ?string $logo = '')
+    public static function create(string $basePath, string $lang = 'en-US', string $timezone = 'UTC', ?string $host = "0.0.0.0", ?bool $debug = true, ?string $logo = '')
     {
         self::$logo = $logo;
         self::$lang = $lang;
         self::$debug = $debug;
         self::$timezone = $timezone;
         self::$host = $host;
-        self::$port = $port;
 
         self::$basePath = $basePath;
         self::$configPath = $basePath . '/config';
@@ -88,6 +84,13 @@ class App
         self::$bootstrap->loadRoute();
         self::$bootstrap->loadCommand();
         self::$bootstrap->run();
+    }
+
+    public static function runWeb()
+    {
+        self::$bootstrap->loadApp();
+        self::$bootstrap->loadRoute();
+        self::$bootstrap->runWeb();
     }
 
     public static function web(): \Slim\App
@@ -174,27 +177,6 @@ class App
             );
         }
         return self::$di->get("view." . $name);
-    }
-
-    public static function timer(): Timer
-    {
-        return new Timer();
-    }
-
-    public static function worker(): Worker
-    {
-        if (!self::$di->has("worker")) {
-            self::$di->set("worker", new Worker(
-                \Core\App::config("use")->get('worker', [
-                    'nonblocking' => true,
-                    'expiry_duration' => 60,
-                    'min_workers' => 10,
-                    'max_workers' => 10000,
-                ]),
-                logger: App::log('worker', Level::Info),
-            ));
-        }
-        return self::$di->get("worker");
     }
 
     public static function event(): Event

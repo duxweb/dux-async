@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use Core\App;
-use Core\Coroutine\ContextManage;
 use Core\Handlers\ExceptionBusiness;
 use Symfony\Component\VarDumper\VarDumper;
 
@@ -171,7 +170,7 @@ if (!function_exists('__')) {
             }
         }
 
-        return App::trans()->trans($value, $parameters, $domain, ContextManage::context()->getValue('lang'));
+        return App::trans()->trans($value, $parameters, $domain, App::di()->get('lang'));
     }
 }
 

@@ -6,7 +6,8 @@ class PredisAdapter
 {
     protected \Predis\ClientInterface $client;
 
-    public function __construct($options = []) {
+    public function __construct($options = [])
+    {
         $this->client = new \Predis\Client([
             'scheme' => 'tcp',
             'host'   => $options['host'] ?? '127.0.0.1',

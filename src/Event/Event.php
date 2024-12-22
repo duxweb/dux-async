@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Core\Event;
@@ -17,7 +18,7 @@ class Event extends EventDispatcher
         $this->registers[$eventName][] = !is_array($listener) ? 'callable' : implode(':', [$listener[0]::class, $listener[1]]);
         parent::addListener($eventName, $listener, $priority);
     }
-    
+
     public function registerAttribute(): void
     {
         $attributes = App::attributes();
@@ -33,5 +34,4 @@ class Event extends EventDispatcher
             }
         }
     }
-
 }

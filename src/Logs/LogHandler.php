@@ -17,20 +17,9 @@ class LogHandler
     public static function init(string $name, Level $level): Logger
     {
         $fileHandle = new RotatingFileHandler(App::$dataPath . '/logs/' . $name . '.log', 15, $level, true, 0777);
-        $streamHandler = new StreamHandler('php://stdout', $level);
-        $streamHandler->setFormatter(new AnsiLineFormatter());
         $logger = new Logger($name);
         $logger->useLoggingLoopDetection(false);
         $logger->pushHandler($fileHandle);
-        $logger->pushHandler($streamHandler);
-        $logger->pushProcessor(function (LogRecord $record) {
-            if (isset($record->context['file'])) {
-                return $record;
-            }
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-            $record->extra['file'] = $trace[2];
-            return $record;
-        });
         return $logger;
     }
 }

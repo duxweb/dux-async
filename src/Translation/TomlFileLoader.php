@@ -15,7 +15,7 @@ class TomlFileLoader extends FileLoader
         try {
             $messages = \Devium\Toml\Toml::decode(file_get_contents($resource), asArray: true);
         } catch (ParseException $e) {
-            throw new InvalidResourceException(sprintf('The file "%s" does not contain valid TOML: ', $resource).$e->getMessage(), 0, $e);
+            throw new InvalidResourceException(sprintf('The file "%s" does not contain valid TOML: ', $resource) . $e->getMessage(), 0, $e);
         }
 
         if (!\is_array($messages)) {

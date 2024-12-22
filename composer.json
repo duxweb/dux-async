@@ -23,7 +23,6 @@
     "php": ">=8.2",
     "ext-zlib": "*",
     "ext-pdo": "*",
-    "ext-swoole": "^5.0|^6.0",
     "php-di/php-di": "^7.0",
     "nesbot/carbon": "^3.8",
     "nette/utils": "^4.0",
@@ -40,7 +39,6 @@
     "illuminate/events": "^11.30",
     "doctrine/dbal": "^4.2",
     "fileeye/mimemap": "^2.2",
-    "chubbyphp/chubbyphp-swoole-request-handler": "^1.5",
     "slim/psr7": "^1.7",
     "nunomaduro/termwind": "^2.2",
     "symfony/var-dumper": "^7.1",
@@ -56,7 +54,10 @@
     "vlucas/valitron": "^1.4",
     "kalnoy/nestedset": "^6.0",
     "zoujingli/ip2region": "^2.0",
-    "eftec/bladeone": "^4.16"
+    "eftec/bladeone": "^4.16",
+    "enqueue/enqueue": "^0.10.24",
+    "enqueue/redis": "^0.10.19",
+    "enqueue/amqp-lib": "^0.10.19"
   },
   "autoload": {
     "psr-4": {
@@ -65,7 +66,6 @@
     }
   },
   "require-dev": {
-    "swoole/ide-helper": "^5.1",
     "pestphp/pest": "^3.5",
     "pestphp/pest-plugin-stressless": "^3.0",
     "mockery/mockery": "^1.6"

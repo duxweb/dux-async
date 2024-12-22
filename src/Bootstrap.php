@@ -17,13 +17,9 @@ use Core\Handlers\ErrorPlainRenderer;
 use Core\Handlers\ErrorXmlRenderer;
 use Core\Middleware\CorsMiddleware;
 use Core\Middleware\LangMiddleware;
-use Core\Middleware\RequestMiddleware;
 use Core\Permission\PermissionCommand;
 use Core\Queue\QueueCommand;
 use Core\Route\RouteCommand;
-use Core\Utils\Fmt;
-use Core\View\View;
-use Core\Web\WebCommand;
 use DI\DependencyException;
 use DI\NotFoundException;
 use Latte\Engine;
@@ -48,7 +44,6 @@ class Bootstrap
      */
     public function registerFunc(): void
     {
-        Fmt::init();
         require_once "Func/Response.php";
         require_once "Func/Common.php";
     }
@@ -72,6 +67,7 @@ class Bootstrap
         // 注册web服务
         AppFactory::setContainer(App::di());
         $this->web = AppFactory::create();
+        App::$debug = App::config("app")->get("debug", false);
     }
 
 
@@ -87,7 +83,6 @@ class Bootstrap
         $this->web->addRoutingMiddleware();
         // 注册请求中间件
         $this->web->addMiddleware(new LangMiddleware);
-        $this->web->addMiddleware(new RequestMiddleware(App::log('request')));
         // 注册授权异常
         $errorMiddleware = $this->web->addErrorMiddleware(App::$debug, true, true);
         // 注册异常
@@ -172,7 +167,6 @@ class Bootstrap
 
         $commands[] = BackupCommand::class;
         $commands[] = RestoreCommand::class;
-        $commands[] = WebCommand::class;
         $commands[] = PermissionCommand::class;
         $commands[] = RouteCommand::class;
         $commands[] = ListCommand::class;
@@ -194,5 +188,14 @@ class Bootstrap
     public function run(): void
     {
         $this->command->run();
+    }
+
+    /**
+     * 启动web服务
+     * @return void
+     */
+    public function runWeb(): void
+    {
+        $this->web->run();
     }
 }

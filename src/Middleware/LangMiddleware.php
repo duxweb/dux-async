@@ -2,7 +2,7 @@
 
 namespace Core\Middleware;
 
-use Core\Coroutine\ContextManage;
+use Core\App;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -14,9 +14,8 @@ final class LangMiddleware implements MiddlewareInterface
     {
         $acceptLanguage = $request->getHeaderLine('Accept-Language');
         $lang = $this->parseAcceptLanguage($acceptLanguage);
-
-        ContextManage::context()->setValue('lang', $lang);
         $request = $request->withAttribute('lang', $lang);
+        App::di()->set('lang', $lang);
         return $handler->handle($request);
     }
 
