@@ -170,7 +170,7 @@ if (!function_exists('__')) {
             }
         }
 
-        return App::trans()->trans($value, $parameters, $domain, App::di()->get('lang'));
+        return App::trans()->trans($value, $parameters, $domain, App::di()->get('lang', App::$lang));
     }
 }
 
