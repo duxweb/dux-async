@@ -20,7 +20,7 @@ class Redis
         }
     }
 
-    public function connect(): \Predis\ClientInterface|\Redis
+    public function factory(): \Predis\ClientInterface|\Redis
     {
         return $this->client->getClient();
     }
