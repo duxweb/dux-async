@@ -297,23 +297,18 @@ class App
         return $config;
     }
 
-    public static function queue(): Queue
+    public static function queue(string $type = ""): Queue
     {
-        if (!self::$di->has("queue")) {
-            $config = self::config("queue");
-            $queue = new Queue($config->get("driver", "sqlite"), $config->get("params", []), App::log('queue', Level::Info));
-
-            $workers = $config->get('workers', []);
-            foreach ($workers as $worker) {
-                $queue->worker($worker);
-            }
-
+        if (!$type) {
+            $type = self::config("queue")->get("type");
+        }
+        if (!self::$di->has("queue." . $type)) {
             self::$di->set(
-                "queue",
-                $queue
+                "queue." . $type,
+                new Queue($type)
             );
         }
-        return self::$di->get("queue");
+        return self::$di->get("queue." . $type);
     }
 
     public static function storage(string $type = ""): StorageInterface
@@ -340,8 +335,7 @@ class App
 
             $dbFile = config_path($db ?: '');
             if ($db && is_file($dbFile)) {
-                $cBuff = XdbSearcher::loadContentFromFile($dbFile);
-                $ip2region = XdbSearcher::newWithBuffer($cBuff);
+                $ip2region = XdbSearcher::newWithFileOnly($dbFile);
             } else {
                 $ip2region = null;
             }
