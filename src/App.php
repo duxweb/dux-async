@@ -128,7 +128,7 @@ class App
     public static function lock(?string $type = null): LockFactory
     {
         $config = self::config("use");
-        $type = $type ?? $config->get("lock.type", "memory");
+        $type = $type ?? $config->get("lock.type", "semaphore");
 
         if (!self::$di->has("lock." . $type)) {
             self::$di->set(
@@ -142,7 +142,7 @@ class App
     public static function cache(?string $type = null): Psr16Cache
     {
         $config = self::config("use");
-        $type = $type ?? $config->get("cache.type", "memory");
+        $type = $type ?? $config->get("cache.type", "file");
 
         if (!self::$di->has("cache." . $type)) {
             self::$di->set(
@@ -300,7 +300,7 @@ class App
     public static function queue(string $type = ""): Queue
     {
         if (!$type) {
-            $type = self::config("queue")->get("type");
+            $type = self::config("queue")->get("type", 'redis');
         }
         if (!self::$di->has("queue." . $type)) {
             self::$di->set(
