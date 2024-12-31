@@ -67,8 +67,7 @@ class Scheduler
                     continue;
                 }
                 $params = $annotation["params"];
-                [$class, $method] = explode(':', $annotation["class"]);
-                $this->add($params["cron"], [new $class, $method]);
+                $this->add($params["cron"], explode(':', $annotation["class"]));
             }
         }
     }
