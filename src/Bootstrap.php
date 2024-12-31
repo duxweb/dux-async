@@ -20,6 +20,7 @@ use Core\Middleware\LangMiddleware;
 use Core\Permission\PermissionCommand;
 use Core\Queue\QueueCommand;
 use Core\Route\RouteCommand;
+use Core\Scheduler\SchedulerCommand;
 use DI\DependencyException;
 use DI\NotFoundException;
 use Latte\Engine;
@@ -69,7 +70,6 @@ class Bootstrap
         $this->web = AppFactory::create();
         App::$debug = App::config("use")->get("app.debug", false);
     }
-
 
     /**
      * 加载路由
@@ -140,6 +140,9 @@ class Bootstrap
         // 注册事件
         App::event()->registerAttribute();
 
+        // 注册计划任务
+        App::scheduler()->registerAttribute();
+
         // 普通路由注册
         foreach (App::route()->app as $route) {
             $route->run($this->web);
@@ -172,6 +175,9 @@ class Bootstrap
         $commands[] = ListCommand::class;
         $commands[] = MigrateCommand::class;
         $commands[] = QueueCommand::class;
+        $commands[] = SchedulerCommand::class;
+
+        $commands = [...$commands, ...Command::registerAttribute()];
 
         $this->command = Command::init($commands);
 

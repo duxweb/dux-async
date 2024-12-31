@@ -13,6 +13,7 @@ use Core\Lock\Lock;
 use Core\Logs\LogHandler;
 use Core\Queue\Queue;
 use Core\Redis\Redis;
+use Core\Scheduler\Scheduler;
 use Core\Storage\Contracts\StorageInterface;
 use Core\Storage\Storage;
 use Core\Translation\TomlFileLoader;
@@ -326,6 +327,17 @@ class App
             );
         }
         return self::$di->get("storage." . $type)->getInstance();
+    }
+
+    public static function scheduler(): Scheduler
+    {
+        if (!self::$di->has("scheduler")) {
+            self::$di->set(
+                "scheduler",
+                new Scheduler()
+            );
+        }
+        return self::$di->get("scheduler");
     }
 
     public static function geo(): XdbSearcher|null
