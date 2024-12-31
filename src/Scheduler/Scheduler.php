@@ -4,6 +4,7 @@ namespace Core\Scheduler;
 
 use Core\App;
 use Core\Handlers\Exception;
+use Core\Scheduler\Attribute\Scheduler as AttributeScheduler;
 use GO\Scheduler as GoScheduler;
 
 class Scheduler
@@ -62,7 +63,7 @@ class Scheduler
 
         foreach ($attributes as $item) {
             foreach ($item["annotations"] as $annotation) {
-                if ($annotation["name"] != Scheduler::class) {
+                if ($annotation["name"] != AttributeScheduler::class) {
                     continue;
                 }
                 $params = $annotation["params"];
