@@ -108,7 +108,7 @@ abstract class Resources
      * @param string $model
      * @return Model
      */
-    public function queryModel(string $model): Model
+    public function queryModel(string $model): Builder
     {
         return $model::query();
     }
