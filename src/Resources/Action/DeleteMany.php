@@ -24,7 +24,8 @@ trait DeleteMany
         App::db()->getConnection()->beginTransaction();
 
         foreach ($ids as $id) {
-            $query = $this->model::query()->where($this->key, $id);
+            $model = $this->queryModel($this->model);
+            $query = $model->where($this->key, $id);
             $this->queryOne($query, $request, $args);
             $this->query($query);
 

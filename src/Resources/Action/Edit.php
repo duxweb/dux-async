@@ -23,13 +23,14 @@ trait  Edit
         $validatorEvent = $this->event->get('validator', $requestData, $request, $args);
 
         $data = Validator::parser([...$requestData, ...$args], [...$validator, ...$validatorEvent]);
-        
+
         $format = $this->format($data, $request, $args);
         $formatEvent = $this->event->get('format', $data, $request, $args);
         $modelData = $this->formatData([...$format, ...$formatEvent], $data);
 
         App::db()->getConnection()->beginTransaction();
-        $query = $this->model::query()->where($this->key, $id);
+        $model = $this->queryModel($this->model);
+        $query = $model->where($this->key, $id);
         $this->queryOne($query, $request, $args);
         $this->query($query);
 

@@ -16,7 +16,8 @@ trait One
 
         $info = collect();
         if ($id) {
-            $query = $this->model::query()->where($this->key, $id);
+            $model = $this->queryModel($this->model);
+            $query = $model->where($this->key, $id);
             $this->queryOne($query, $request, $args);
             $this->query($query);
             $this->event->run('queryOne', $query, $request, $args);

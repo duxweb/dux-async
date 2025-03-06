@@ -102,6 +102,17 @@ abstract class Resources
      */
     public function init(ServerRequestInterface $request, ResponseInterface $response, array $args): void {}
 
+
+    /**
+     * 获取模型
+     * @param string $model
+     * @return Model
+     */
+    public function queryModel(string $model): Model
+    {
+        return $model::query();
+    }
+
     /**
      * 数据转换
      * 转换数据字段内容
@@ -112,7 +123,6 @@ abstract class Resources
     {
         return [];
     }
-
 
     /**
      * 单条或多条数据查询

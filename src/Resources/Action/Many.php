@@ -29,7 +29,7 @@ trait Many
         /**
          * @var $query Builder
          */
-        $query = $this->model::query();
+        $query = $this->queryModel($this->model);
 
         $key = $queryParams['id'];
         if ($key) {
